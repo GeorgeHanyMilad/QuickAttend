@@ -2,7 +2,6 @@ package com.georgehany.quickattend.data.export
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.FileProvider
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
@@ -25,170 +24,419 @@ object ExcelExporter {
         students: List<Student>,
         records: List<AttendanceRecord>
     ): File? {
+
+        var workbook: XSSFWorkbook? = null
+
         return try {
-            val workbook = XSSFWorkbook()
+
+            workbook = XSSFWorkbook()
+
             val sheet = workbook.createSheet("Attendance Summary")
 
-            // Styles
+            // ==============================
+            // STYLES
+            // ==============================
+
             val headerStyle = workbook.createCellStyle().apply {
+
                 val font = workbook.createFont().apply {
                     bold = true
                     color = IndexedColors.WHITE.index
                 }
+
                 setFont(font)
-                fillForegroundColor = IndexedColors.DARK_BLUE.index
-                fillPattern = FillPatternType.SOLID_FOREGROUND
-                alignment = HorizontalAlignment.CENTER
+
+                fillForegroundColor =
+                    IndexedColors.DARK_BLUE.index
+
+                fillPattern =
+                    FillPatternType.SOLID_FOREGROUND
+
+                alignment =
+                    HorizontalAlignment.CENTER
             }
 
-            val summaryTitleStyle = workbook.createCellStyle().apply {
-                val font = workbook.createFont().apply {
-                    bold = true
-                    color = IndexedColors.DARK_BLUE.index
+            val summaryTitleStyle =
+                workbook.createCellStyle().apply {
+
+                    val font = workbook.createFont().apply {
+                        bold = true
+                        color = IndexedColors.DARK_BLUE.index
+                    }
+
+                    setFont(font)
                 }
-                setFont(font)
-            }
 
-            val presentMap = records.associateBy { it.studentId }
-            val presentStudents = students.filter { presentMap[it.studentId]?.isPresent == true }
-            val presentCount = presentStudents.size
-            val notPresentCount = session.totalStudents - presentCount
-            val attendanceRate = if (session.totalStudents > 0) {
-                (presentCount.toDouble() / session.totalStudents.toDouble()) * 100.0
-            } else 0.0
+            // ==============================
+            // ATTENDANCE DATA
+            // ==============================
 
-            val timeFormatter = SimpleDateFormat("hh:mm a", Locale.ENGLISH)
-            val startTimeStr = session.startTimeMs?.let { timeFormatter.format(Date(it)) } ?: "N/A"
-            val endTimeStr = session.endTimeMs?.let { timeFormatter.format(Date(it)) } ?: "N/A"
+            val recordsMap =
+                records.associateBy { it.studentId }
+
+            val presentCount =
+                students.count { student ->
+                    recordsMap[student.studentId]?.isPresent == true
+                }
+
+            val notPresentCount =
+                students.size - presentCount
+
+            val totalStudents =
+                students.size
+
+            val attendanceRate =
+                if (totalStudents > 0) {
+                    (presentCount.toDouble() /
+                            totalStudents.toDouble()) * 100.0
+                } else {
+                    0.0
+                }
+
+            // ==============================
+            // TIME FORMAT
+            // ==============================
+
+            val timeFormatter =
+                SimpleDateFormat(
+                    "hh:mm a",
+                    Locale.ENGLISH
+                )
+
+            val startTimeStr =
+                session.startTimeMs?.let {
+                    timeFormatter.format(Date(it))
+                } ?: "N/A"
+
+            val endTimeStr =
+                session.endTimeMs?.let {
+                    timeFormatter.format(Date(it))
+                } ?: "N/A"
 
             var rowNum = 0
 
-            // Title Header Block
-            val titleRow = sheet.createRow(rowNum++)
+            // ==============================
+            // TITLE
+            // ==============================
+
+            val titleRow =
+                sheet.createRow(rowNum++)
+
             titleRow.createCell(0).apply {
-                setCellValue("Attendance Report – ${session.sectionName}")
-                cellStyle = summaryTitleStyle
+
+                setCellValue(
+                    "Attendance Report - ${session.sectionName}"
+                )
+
+                cellStyle =
+                    summaryTitleStyle
             }
 
-            rowNum++ // Blank line
+            rowNum++
 
-            // Summary Information Block
-            val summaryItems = listOf(
-                "Section Name:" to session.sectionName,
-                "Date:" to session.date,
-                "Start Time:" to startTimeStr,
-                "End Time:" to endTimeStr,
-                "Total Students:" to session.totalStudents.toString(),
-                "Present:" to presentCount.toString(),
-                "Not Present:" to notPresentCount.toString(),
-                "Attendance Rate:" to String.format(Locale.ENGLISH, "%.1f%%", attendanceRate)
-            )
+            // ==============================
+            // SUMMARY
+            // ==============================
+
+            val summaryItems =
+                listOf(
+                    "Section Name:" to session.sectionName,
+                    "Date:" to session.date,
+                    "Start Time:" to startTimeStr,
+                    "End Time:" to endTimeStr,
+                    "Total Students:" to totalStudents.toString(),
+                    "Present:" to presentCount.toString(),
+                    "Absent:" to notPresentCount.toString(),
+                    "Attendance Rate:" to
+                            String.format(
+                                Locale.ENGLISH,
+                                "%.1f%%",
+                                attendanceRate
+                            )
+                )
 
             for ((key, value) in summaryItems) {
-                val row = sheet.createRow(rowNum++)
+
+                val row =
+                    sheet.createRow(rowNum++)
+
                 row.createCell(0).apply {
+
                     setCellValue(key)
-                    cellStyle = summaryTitleStyle
+
+                    cellStyle =
+                        summaryTitleStyle
                 }
-                row.createCell(1).setCellValue(value)
+
+                row.createCell(1)
+                    .setCellValue(value)
             }
 
-            rowNum++ // Blank line
+            rowNum++
 
-            // Table Section Header
-            val tableTitleRow = sheet.createRow(rowNum++)
+            // ==============================
+            // ATTENDANCE TABLE TITLE
+            // ==============================
+
+            val tableTitleRow =
+                sheet.createRow(rowNum++)
+
             tableTitleRow.createCell(0).apply {
-                setCellValue("Present Students List")
-                cellStyle = summaryTitleStyle
+
+                setCellValue(
+                    "Attendance List"
+                )
+
+                cellStyle =
+                    summaryTitleStyle
             }
 
-            // Column Headers
-            val headers = listOf("Student ID", "Student Name", "Date", "Time", "Section")
-            val headerRow = sheet.createRow(rowNum++)
+            // ==============================
+            // TABLE HEADERS
+            // ==============================
+
+            val headers =
+                listOf(
+                    "Student ID",
+                    "Student Name",
+                    "Status",
+                    "Date",
+                    "Time",
+                    "Section"
+                )
+
+            val headerRow =
+                sheet.createRow(rowNum++)
+
             for (i in headers.indices) {
-                val cell = headerRow.createCell(i)
+
+                val cell =
+                    headerRow.createCell(i)
+
                 cell.setCellValue(headers[i])
-                cell.cellStyle = headerStyle
+
+                cell.cellStyle =
+                    headerStyle
             }
 
-            // Data Rows
-            for (student in presentStudents) {
-                val rec = presentMap[student.studentId]
-                val recordTimeStr = rec?.timestamp?.let { timeFormatter.format(Date(it)) } ?: startTimeStr
-                val row = sheet.createRow(rowNum++)
-                row.createCell(0).setCellValue(student.studentId)
-                row.createCell(1).setCellValue(student.studentName)
-                row.createCell(2).setCellValue(session.date)
-                row.createCell(3).setCellValue(recordTimeStr)
-                row.createCell(4).setCellValue(session.sectionName)
+            // ==============================
+            // ALL STUDENTS
+            // ==============================
+
+            for (student in students) {
+
+                val record =
+                    recordsMap[student.studentId]
+
+                val isPresent =
+                    record?.isPresent == true
+
+                val status =
+                    if (isPresent) {
+                        "Present"
+                    } else {
+                        "Absent"
+                    }
+
+                val recordTime =
+                    record?.timestamp?.let {
+                        timeFormatter.format(
+                            Date(it)
+                        )
+                    } ?: "-"
+
+                val row =
+                    sheet.createRow(rowNum++)
+
+                row.createCell(0)
+                    .setCellValue(
+                        student.studentId
+                    )
+
+                row.createCell(1)
+                    .setCellValue(
+                        student.studentName
+                    )
+
+                row.createCell(2)
+                    .setCellValue(
+                        status
+                    )
+
+                row.createCell(3)
+                    .setCellValue(
+                        session.date
+                    )
+
+                row.createCell(4)
+                    .setCellValue(
+                        recordTime
+                    )
+
+                row.createCell(5)
+                    .setCellValue(
+                        session.sectionName
+                    )
             }
 
-            // Auto-fit columns
+            // ==============================
+            // COLUMN WIDTHS
+            // ==============================
+
             for (i in headers.indices) {
-                sheet.autoSizeColumn(i)
+
+                sheet.setColumnWidth(
+                    i,
+                    5000
+                )
             }
 
-            // Save to File
-            val sanitizedSection = session.sectionName.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            val sanitizedDate = session.date.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            val fileName = "${sanitizedSection}_$sanitizedDate.xlsx"
+            // ==============================
+            // FILE NAME
+            // ==============================
 
-            val exportDir = File(context.cacheDir, "exported_reports")
+            val sanitizedSection =
+                session.sectionName.replace(
+                    Regex("[^a-zA-Z0-9_]"),
+                    "_"
+                )
+
+            val sanitizedDate =
+                session.date.replace(
+                    Regex("[^a-zA-Z0-9_]"),
+                    "_"
+                )
+
+            val fileName =
+                "${sanitizedSection}_${sanitizedDate}.xlsx"
+
+            // ==============================
+            // EXPORT DIRECTORY
+            // ==============================
+
+            val exportDir =
+                File(
+                    context.cacheDir,
+                    "exported_reports"
+                )
+
             if (!exportDir.exists()) {
                 exportDir.mkdirs()
             }
 
-            val file = File(exportDir, fileName)
-            FileOutputStream(file).use { out ->
-                workbook.write(out)
+            // ==============================
+            // CREATE FILE
+            // ==============================
+
+            val file =
+                File(
+                    exportDir,
+                    fileName
+                )
+
+            FileOutputStream(file).use { output ->
+
+                workbook.write(output)
+
+                output.flush()
             }
-            workbook.close()
+
             file
+
         } catch (e: Exception) {
+
             e.printStackTrace()
+
             null
+
+        } finally {
+
+            try {
+                workbook?.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
-    fun shareExportedFile(context: Context, file: File, sectionName: String) {
+    // ==========================================
+    // SHARE EXCEL FILE
+    // ==========================================
+
+    fun shareExportedFile(
+        context: Context,
+        file: File,
+        sectionName: String
+    ) {
+
         try {
-            val authority = "${context.packageName}.fileprovider"
-    
-            val contentUri = FileProvider.getUriForFile(
-                context,
-                authority,
-                file
+
+            // Make sure the file actually exists
+            if (!file.exists()) {
+
+                throw IllegalStateException(
+                    "Exported Excel file does not exist."
+                )
+            }
+
+            // FileProvider authority
+            val authority =
+                "${context.packageName}.fileprovider"
+
+            // Convert local file to content:// URI
+            val contentUri =
+                FileProvider.getUriForFile(
+                    context,
+                    authority,
+                    file
+                )
+
+            // Create SEND intent
+            val shareIntent =
+                Intent(Intent.ACTION_SEND).apply {
+
+                    type =
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                    putExtra(
+                        Intent.EXTRA_STREAM,
+                        contentUri
+                    )
+
+                    putExtra(
+                        Intent.EXTRA_SUBJECT,
+                        "Attendance Report - $sectionName"
+                    )
+
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+
+                    clipData =
+                        android.content.ClipData.newRawUri(
+                            "Attendance Excel",
+                            contentUri
+                        )
+                }
+
+            // Android Share Sheet
+            val chooserIntent =
+                Intent.createChooser(
+                    shareIntent,
+                    "Share Attendance Excel"
+                )
+
+            chooserIntent.addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-    
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    
-                putExtra(Intent.EXTRA_STREAM, contentUri)
-    
-                putExtra(
-                    Intent.EXTRA_SUBJECT,
-                    "Attendance Report - $sectionName"
-                )
-    
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    
-                clipData = android.content.ClipData.newRawUri(
-                    "Attendance Excel",
-                    contentUri
-                )
-            }
-    
-            val chooserIntent = Intent.createChooser(
-                shareIntent,
-                "Share Attendance Excel"
-            ).apply {
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-    
-            context.startActivity(chooserIntent)
-    
+
+            context.startActivity(
+                chooserIntent
+            )
+
         } catch (e: Exception) {
+
             e.printStackTrace()
         }
-    } 
+    }
 }
