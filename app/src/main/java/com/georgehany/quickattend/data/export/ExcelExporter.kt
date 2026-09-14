@@ -133,7 +133,7 @@ object ExcelExporter {
             val sanitizedDate = session.date.replace(Regex("[^a-zA-Z0-9_]"), "_")
             val fileName = "${sanitizedSection}_$sanitizedDate.xlsx"
 
-            val exportDir = File(context.cacheDirectory, "exported_reports")
+            val exportDir = File(context.cacheDir, "exported_reports")
             if (!exportDir.exists()) {
                 exportDir.mkdirs()
             }
