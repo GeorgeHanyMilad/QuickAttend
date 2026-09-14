@@ -36,7 +36,7 @@ object ExcelExporter {
                     color = IndexedColors.WHITE.index
                 }
                 setFont(font)
-                fillForegroundColor = IndexedColors.NAVY.index
+                fillForegroundColor = IndexedColors.DARK_BLUE.index
                 fillPattern = FillPatternType.SOLID_FOREGROUND
                 alignment = HorizontalAlignment.CENTER
             }
