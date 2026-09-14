@@ -150,47 +150,48 @@ object ExcelExporter {
         }
     }
 
-fun shareExportedFile(context: Context, file: File, sectionName: String) {
-    try {
-        val authority = "${context.packageName}.fileprovider"
+    fun shareExportedFile(context: Context, file: File, sectionName: String) {
+        try {
+            val authority = "${context.packageName}.fileprovider"
 
-        val contentUri = FileProvider.getUriForFile(
-            context,
-            authority,
-            file
-        )
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-            putExtra(Intent.EXTRA_STREAM, contentUri)
-
-            putExtra(
-                Intent.EXTRA_SUBJECT,
-                "Attendance Report - $sectionName"
+            val contentUri = FileProvider.getUriForFile(
+                context,
+                authority,
+                file
             )
 
-            putExtra(
-                Intent.EXTRA_TEXT,
-                "Attached attendance report for $sectionName."
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+
+                putExtra(
+                    Intent.EXTRA_SUBJECT,
+                    "Attendance Report - $sectionName"
+                )
+
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    "Attached attendance report for $sectionName."
+                )
+
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                clipData = android.content.ClipData.newRawUri(
+                    "Attendance Excel",
+                    contentUri
+                )
+            }
+
+            val chooser = Intent.createChooser(
+                shareIntent,
+                "Share Attendance Excel"
             )
 
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            context.startActivity(chooser)
 
-            clipData = android.content.ClipData.newRawUri(
-                "Attendance Excel",
-                contentUri
-            )
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-
-        val chooser = Intent.createChooser(
-            shareIntent,
-            "Share Attendance Excel"
-        )
-
-        context.startActivity(chooser)
-
-    } catch (e: Exception) {
-        e.printStackTrace()
     }
 }
