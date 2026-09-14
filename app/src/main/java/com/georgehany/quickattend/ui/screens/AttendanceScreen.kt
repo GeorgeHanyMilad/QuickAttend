@@ -127,7 +127,7 @@ fun AttendanceScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterAlignment,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Top Section: Progress & Stats Summary
