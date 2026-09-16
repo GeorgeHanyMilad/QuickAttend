@@ -656,9 +656,7 @@ private fun MappingDropdown(
             expanded = expanded,
             onDismissRequest = {
                 onExpandedChange(false)
-            },
-            shape = RoundedCornerShape(14.dp),
-            containerColor = PureWhite
+            }
         ) {
 
             columns.forEachIndexed { index, columnName ->
