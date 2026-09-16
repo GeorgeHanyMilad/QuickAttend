@@ -1,10 +1,13 @@
+```kotlin
 package com.georgehany.quickattend.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,17 +22,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,8 +50,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.georgehany.quickattend.data.local.entity.Session
@@ -56,6 +63,10 @@ import com.georgehany.quickattend.ui.theme.DarkRedNotPresent
 import com.georgehany.quickattend.ui.theme.EmeraldPresent
 import com.georgehany.quickattend.ui.theme.RedNotPresent
 import com.georgehany.quickattend.ui.theme.ThemeMode
+
+// ============================================================
+// QuickAttend Home Screen
+// ============================================================
 
 @Composable
 fun HomeScreen(
@@ -71,83 +82,100 @@ fun HomeScreen(
         mutableIntStateOf(0)
     }
 
-    val displayedSessions = if (selectedTab == 0) {
-        todaySessions
-    } else {
-        historySessions
-    }
+    val displayedSessions =
+        if (selectedTab == 0) {
+            todaySessions
+        } else {
+            historySessions
+        }
+
+    val completedToday =
+        todaySessions.count {
+            it.status == "COMPLETED"
+        }
+
+    val inProgressToday =
+        todaySessions.count {
+            it.status == "IN_PROGRESS"
+        }
+
+    val totalStudentsToday =
+        todaySessions.sumOf {
+            it.totalStudents
+        }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            .background(
+                MaterialTheme.colorScheme.background
+            ),
+        contentPadding = PaddingValues(
             start = 20.dp,
             end = 20.dp,
-            top = 24.dp,
-            bottom = 32.dp
+            top = 22.dp,
+            bottom = 36.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
-        item {
-            HeaderSection()
-        }
+        // ----------------------------------------------------
+        // Header
+        // ----------------------------------------------------
 
         item {
-            AppearanceCard(
+            HomeHeader(
                 themeMode = themeMode,
                 onThemeModeChange = onThemeModeChange
             )
         }
 
+        // ----------------------------------------------------
+        // Main Dashboard
+        // ----------------------------------------------------
+
         item {
-            OverviewCard(
-                todaySessions = todaySessions,
-                historySessions = historySessions
+            DashboardCard(
+                todaySessions = todaySessions.size,
+                completedToday = completedToday,
+                inProgressToday = inProgressToday,
+                totalStudentsToday = totalStudentsToday
             )
         }
 
+        // ----------------------------------------------------
+        // Create Session
+        // ----------------------------------------------------
+
         item {
-            Button(
-                onClick = onStartOrCreateSessionClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null
-                )
-
-                Spacer(
-                    modifier = Modifier.width(8.dp)
-                )
-
-                Text(
-                    text = "Start New Session",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
-                )
-            }
+            CreateSessionCard(
+                onClick = onStartOrCreateSessionClick
+            )
         }
 
+        // ----------------------------------------------------
+        // Sessions Header
+        // ----------------------------------------------------
+
         item {
-            SessionTabs(
+            SessionsHeader(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                onTabSelected = {
+                    selectedTab = it
+                }
             )
         }
+
+        // ----------------------------------------------------
+        // Session List
+        // ----------------------------------------------------
 
         if (displayedSessions.isEmpty()) {
 
             item {
                 EmptySessionsState(
-                    isHistory = selectedTab == 1
+                    isHistory = selectedTab == 1,
+                    onCreateSession = onStartOrCreateSessionClick
                 )
             }
 
@@ -155,7 +183,9 @@ fun HomeScreen(
 
             items(
                 items = displayedSessions,
-                key = { session -> session.id }
+                key = {
+                    session -> session.id
+                }
             ) { session ->
 
                 SessionCard(
@@ -172,48 +202,138 @@ fun HomeScreen(
     }
 }
 
+// ============================================================
+// HEADER
+// ============================================================
+
 @Composable
-private fun HeaderSection() {
-    Column(
-        modifier = Modifier.fillMaxWidth()
+private fun HomeHeader(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
     ) {
-        Text(
-            text = "Student Attendance",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+
+            Text(
+                text = "Hello, Eng. George Hany",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = "Manage your attendance sessions with ease.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(
-            modifier = Modifier.height(4.dp)
+            modifier = Modifier.width(12.dp)
         )
 
-        Text(
-            text = "Manage your attendance sessions",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        ThemeToggle(
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange
         )
     }
 }
 
+// ============================================================
+// THEME TOGGLE
+// ============================================================
+
 @Composable
-private fun AppearanceCard(
+private fun ThemeToggle(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+    val isDark =
+        themeMode == ThemeMode.DARK
+
+    Surface(
+        modifier = Modifier
+            .size(46.dp)
+            .clip(CircleShape)
+            .clickable {
+                onThemeModeChange(
+                    if (isDark) {
+                        ThemeMode.LIGHT
+                    } else {
+                        ThemeMode.DARK
+                    }
+                )
+            },
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
         )
     ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+
+            Icon(
+                imageVector =
+                    if (isDark) {
+                        Icons.Default.LightMode
+                    } else {
+                        Icons.Default.DarkMode
+                    },
+                contentDescription =
+                    if (isDark) {
+                        "Switch to light mode"
+                    } else {
+                        "Switch to dark mode"
+                    },
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+    }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+@Composable
+private fun DashboardCard(
+    todaySessions: Int,
+    completedToday: Int,
+    inProgressToday: Int,
+    totalStudentsToday: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                MaterialTheme.colorScheme.primary
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
+
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
 
             Row(
@@ -221,23 +341,485 @@ private fun AppearanceCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text = "Attendance Dashboard",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(4.dp)
+                    )
+
+                    Text(
+                        text = "Your teaching activity at a glance",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(
+                            alpha = 0.75f
+                        )
+                    )
+                }
+
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
+                        .background(
+                            MaterialTheme.colorScheme.onPrimary.copy(
+                                alpha = 0.12f
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(23.dp)
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                DashboardMetric(
+                    modifier = Modifier.weight(1f),
+                    value = todaySessions.toString(),
+                    label = "Sessions",
+                    icon = Icons.Default.Schedule
+                )
+
+                DashboardMetric(
+                    modifier = Modifier.weight(1f),
+                    value = completedToday.toString(),
+                    label = "Completed",
+                    icon = Icons.Default.CheckCircle
+                )
+
+                DashboardMetric(
+                    modifier = Modifier.weight(1f),
+                    value = inProgressToday.toString(),
+                    label = "Active",
+                    icon = Icons.Default.PendingActions
+                )
+
+                DashboardMetric(
+                    modifier = Modifier.weight(1f),
+                    value = totalStudentsToday.toString(),
+                    label = "Students",
+                    icon = Icons.Default.Groups
+                )
+            }
+        }
+    }
+}
+
+// ============================================================
+// DASHBOARD METRIC
+// ============================================================
+
+@Composable
+private fun DashboardMetric(
+    modifier: Modifier = Modifier,
+    value: String,
+    label: String,
+    icon: ImageVector
+) {
+    Column(
+        modifier = modifier
+            .clip(
+                RoundedCornerShape(15.dp)
+            )
+            .background(
+                MaterialTheme.colorScheme.onPrimary.copy(
+                    alpha = 0.10f
+                )
+            )
+            .padding(
+                horizontal = 5.dp,
+                vertical = 11.dp
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary.copy(
+                alpha = 0.82f
+            ),
+            modifier = Modifier.size(17.dp)
+        )
+
+        Spacer(
+            modifier = Modifier.height(5.dp)
+        )
+
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onPrimary,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimary.copy(
+                alpha = 0.72f
+            ),
+            maxLines = 1
+        )
+    }
+}
+
+// ============================================================
+// CREATE SESSION CARD
+// ============================================================
+
+@Composable
+private fun CreateSessionCard(
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(
+                RoundedCornerShape(20.dp)
+            )
+            .clickable(
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(17.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(
+                        RoundedCornerShape(15.dp)
+                    )
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(25.dp)
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.width(13.dp)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = "Create New Session",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = "Import a student list and start attendance.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.MoreHoriz,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+// ============================================================
+// SESSIONS HEADER + TABS
+// ============================================================
+
+@Composable
+private fun SessionsHeader(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = "Attendance Sessions",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text =
+                        if (selectedTab == 0) {
+                            "Today's sessions"
+                        } else {
+                            "Previous sessions"
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                imageVector =
+                    if (selectedTab == 0) {
+                        Icons.Default.Schedule
+                    } else {
+                        Icons.Default.History
+                    },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(
+                    RoundedCornerShape(14.dp)
+                )
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant
+                )
+                .padding(4.dp)
+        ) {
+
+            SessionTab(
+                modifier = Modifier.weight(1f),
+                text = "Today",
+                selected = selectedTab == 0,
+                onClick = {
+                    onTabSelected(0)
+                }
+            )
+
+            SessionTab(
+                modifier = Modifier.weight(1f),
+                text = "History",
+                selected = selectedTab == 1,
+                onClick = {
+                    onTabSelected(1)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionTab(
+    modifier: Modifier = Modifier,
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .height(42.dp)
+            .clip(
+                RoundedCornerShape(11.dp)
+            )
+            .clickable(
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(11.dp),
+        color =
+            if (selected) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                Color.Transparent
+            },
+        shadowElevation =
+            if (selected) {
+                1.dp
+            } else {
+                0.dp
+            }
+    ) {
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color =
+                    if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                fontWeight =
+                    if (selected) {
+                        FontWeight.Bold
+                    } else {
+                        FontWeight.Medium
+                    }
+            )
+        }
+    }
+}
+
+// ============================================================
+// SESSION CARD
+// ============================================================
+
+@Composable
+private fun SessionCard(
+    session: Session,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val isDark =
+        MaterialTheme.colorScheme.background ==
+                Color(0xFF0B1220)
+
+    val statusText =
+        when (session.status) {
+            "COMPLETED" -> "Completed"
+            "IN_PROGRESS" -> "In Progress"
+            else -> "Not Started"
+        }
+
+    val statusColor =
+        when (session.status) {
+
+            "COMPLETED" ->
+                if (isDark) {
+                    DarkEmeraldPresent
+                } else {
+                    EmeraldPresent
+                }
+
+            "IN_PROGRESS" ->
+                if (isDark) {
+                    DarkAmberWarning
+                } else {
+                    Color(0xFFE89B2C)
+                }
+
+            else ->
+                if (isDark) {
+                    DarkRedNotPresent
+                } else {
+                    RedNotPresent
+                }
+        }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(
+                RoundedCornerShape(20.dp)
+            )
+            .clickable(
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = 16.dp,
+                        top = 15.dp,
+                        end = 7.dp,
+                        bottom = 15.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(
+                            RoundedCornerShape(14.dp)
+                        )
                         .background(
                             MaterialTheme.colorScheme.primaryContainer
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Icon(
-                        imageVector = when (themeMode) {
-                            ThemeMode.LIGHT -> Icons.Default.LightMode
-                            ThemeMode.DARK -> Icons.Default.DarkMode
-                            ThemeMode.SYSTEM -> Icons.Default.NightsStay
-                        },
+                        imageVector = Icons.Default.Groups,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(23.dp)
                     )
                 }
 
@@ -248,375 +830,208 @@ private fun AppearanceCard(
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
+
                     Text(
-                        text = "Appearance",
+                        text = session.sectionName,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(4.dp)
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Text(
+                            text = session.date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(3.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
+
+                        Text(
+                            text =
+                                "${session.totalStudents} students",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                        )
+
+                        Spacer(
+                            modifier = Modifier.width(6.dp)
+                        )
+
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = statusColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDelete
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete session",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
+            }
+
+            if (session.status == "IN_PROGRESS") {
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 10.dp
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.PendingActions,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(7.dp)
                     )
 
                     Text(
-                        text = when (themeMode) {
-                            ThemeMode.LIGHT -> "Light mode"
-                            ThemeMode.DARK -> "Dark mode"
-                            ThemeMode.SYSTEM -> "System default"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Continue attendance",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text =
+                            "${session.currentIndex}/${session.totalStudents}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = statusColor,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-
-            Spacer(
-                modifier = Modifier.height(14.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                ThemeOption(
-                    modifier = Modifier.weight(1f),
-                    text = "Light",
-                    icon = Icons.Default.WbSunny,
-                    selected = themeMode == ThemeMode.LIGHT,
-                    onClick = {
-                        onThemeModeChange(ThemeMode.LIGHT)
-                    }
-                )
-
-                ThemeOption(
-                    modifier = Modifier.weight(1f),
-                    text = "Dark",
-                    icon = Icons.Default.DarkMode,
-                    selected = themeMode == ThemeMode.DARK,
-                    onClick = {
-                        onThemeModeChange(ThemeMode.DARK)
-                    }
-                )
-
-                ThemeOption(
-                    modifier = Modifier.weight(1f),
-                    text = "System",
-                    icon = Icons.Default.NightsStay,
-                    selected = themeMode == ThemeMode.SYSTEM,
-                    onClick = {
-                        onThemeModeChange(ThemeMode.SYSTEM)
-                    }
-                )
-            }
         }
     }
 }
 
-@Composable
-private fun ThemeOption(
-    modifier: Modifier = Modifier,
-    text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Surface(
-        modifier = modifier
-            .height(46.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        color = containerColor,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(17.dp),
-                tint = contentColor
-            )
-
-            Spacer(
-                modifier = Modifier.width(5.dp)
-            )
-
-            Text(
-                text = text,
-                fontSize = 12.sp,
-                fontWeight = if (selected) {
-                    FontWeight.SemiBold
-                } else {
-                    FontWeight.Normal
-                },
-                color = contentColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverviewCard(
-    todaySessions: List<Session>,
-    historySessions: List<Session>
-) {
-    val completedToday = todaySessions.count {
-        it.status == "COMPLETED"
-    }
-
-    val inProgressToday = todaySessions.count {
-        it.status == "IN_PROGRESS"
-    }
-
-    val totalSessions = historySessions.size
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-
-            Text(
-                text = "Overview",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(
-                modifier = Modifier.height(14.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                OverviewItem(
-                    modifier = Modifier.weight(1f),
-                    value = todaySessions.size.toString(),
-                    label = "Today",
-                    icon = Icons.Default.Schedule
-                )
-
-                OverviewItem(
-                    modifier = Modifier.weight(1f),
-                    value = completedToday.toString(),
-                    label = "Completed",
-                    icon = Icons.Default.People
-                )
-
-                OverviewItem(
-                    modifier = Modifier.weight(1f),
-                    value = inProgressToday.toString(),
-                    label = "In Progress",
-                    icon = Icons.Default.Schedule
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(10.dp)
-            )
-
-            Text(
-                text = "$totalSessions total sessions in history",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun OverviewItem(
-    modifier: Modifier = Modifier,
-    value: String,
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(19.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(
-            modifier = Modifier.height(5.dp)
-        )
-
-        Text(
-            text = value,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun SessionTabs(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp)
-    ) {
-
-        TabButton(
-            modifier = Modifier.weight(1f),
-            text = "Today",
-            selected = selectedTab == 0,
-            onClick = {
-                onTabSelected(0)
-            }
-        )
-
-        TabButton(
-            modifier = Modifier.weight(1f),
-            text = "History",
-            selected = selectedTab == 1,
-            onClick = {
-                onTabSelected(1)
-            }
-        )
-    }
-}
-
-@Composable
-private fun TabButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(42.dp)
-            .clip(RoundedCornerShape(11.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(11.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.surface
-        } else {
-            Color.Transparent
-        },
-        shadowElevation = if (selected) 1.dp else 0.dp
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                fontWeight = if (selected) {
-                    FontWeight.SemiBold
-                } else {
-                    FontWeight.Normal
-                },
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-        }
-    }
-}
+// ============================================================
+// EMPTY STATE
+// ============================================================
 
 @Composable
 private fun EmptySessionsState(
-    isHistory: Boolean
+    isHistory: Boolean,
+    onCreateSession: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
         )
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 40.dp, horizontal = 24.dp),
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 34.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Box(
                 modifier = Modifier
-                    .size(58.dp)
+                    .size(62.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer
+                    ),
                 contentAlignment = Alignment.Center
             ) {
+
                 Icon(
-                    imageVector = Icons.Default.Schedule,
+                    imageVector =
+                        if (isHistory) {
+                            Icons.Default.History
+                        } else {
+                            Icons.Default.Schedule
+                        },
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(29.dp)
                 )
             }
 
             Spacer(
-                modifier = Modifier.height(14.dp)
+                modifier = Modifier.height(15.dp)
             )
 
             Text(
-                text = if (isHistory) {
-                    "No attendance history"
-                } else {
-                    "No sessions today"
-                },
+                text =
+                    if (isHistory) {
+                        "No Attendance History"
+                    } else {
+                        "No Sessions Today"
+                    },
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
             )
 
             Spacer(
@@ -624,163 +1039,44 @@ private fun EmptySessionsState(
             )
 
             Text(
-                text = if (isHistory) {
-                    "Completed sessions will appear here."
-                } else {
-                    "Create a new session to start taking attendance."
-                },
+                text =
+                    if (isHistory) {
+                        "Completed attendance sessions will appear here."
+                    } else {
+                        "Create a new session to start taking attendance."
+                    },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
 
-@Composable
-private fun SessionCard(
-    session: Session,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val statusText = when (session.status) {
-        "COMPLETED" -> "Completed"
-        "IN_PROGRESS" -> "In Progress"
-        else -> "Not Started"
-    }
-
-    val statusColor = when (session.status) {
-        "COMPLETED" -> {
-            if (MaterialTheme.colorScheme.background == Color(0xFF0F141C)) {
-                DarkEmeraldPresent
-            } else {
-                EmeraldPresent
-            }
-        }
-
-        "IN_PROGRESS" -> {
-            if (MaterialTheme.colorScheme.background == Color(0xFF0F141C)) {
-                DarkAmberWarning
-            } else {
-                Color(0xFFE89B2C)
-            }
-        }
-
-        else -> {
-            if (MaterialTheme.colorScheme.background == Color(0xFF0F141C)) {
-                DarkRedNotPresent
-            } else {
-                RedNotPresent
-            }
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.People,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.width(12.dp)
-            )
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-
-                Text(
-                    text = session.sectionName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            if (!isHistory) {
 
                 Spacer(
-                    modifier = Modifier.height(4.dp)
+                    modifier = Modifier.height(16.dp)
                 )
 
-                Text(
-                    text = session.date,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(
-                    modifier = Modifier.height(7.dp)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                TextButton(
+                    onClick = onCreateSession
                 ) {
 
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(statusColor)
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
                     )
 
                     Spacer(
-                        modifier = Modifier.width(6.dp)
+                        modifier = Modifier.width(5.dp)
                     )
 
                     Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = statusColor,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(
-                        modifier = Modifier.width(10.dp)
-                    )
-
-                    Text(
-                        text = "${session.totalStudents} students",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Create Session",
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
             }
-
-            IconButton(
-                onClick = onDelete
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Delete session",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
+```
