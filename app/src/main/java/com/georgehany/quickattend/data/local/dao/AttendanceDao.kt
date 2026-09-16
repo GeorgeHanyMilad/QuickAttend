@@ -1,40 +1,40 @@
-package com.georgehany.quickattend.data.local
+package com.georgehany.quickattend.data.local.dao
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 
-@Entity(
-    tableName = "attendance_records",
-    foreignKeys = [
-        ForeignKey(
-            entity = Session::class,
-            parentColumns = ["id"],
-            childColumns = ["sessionId"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = Student::class,
-            parentColumns = ["id"],
-            childColumns = ["studentId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [
-        Index(value = ["sessionId"]),
-        Index(value = ["studentId"])
-    ]
-)
-data class AttendanceRecord(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+@Dao
+interface AttendanceDao {
 
-    val sessionId: Long,
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecord(record: AttendanceRecord)
 
-    val studentId: Long,
+    @Delete
+    suspend fun deleteRecord(record: AttendanceRecord)
 
-    val isPresent: Boolean,
+    @Query(
+        """
+        SELECT *
+        FROM attendance_records
+        WHERE sessionId = :sessionId
+        ORDER BY timestamp ASC
+        """
+    )
+    suspend fun getRecordsForSession(
+        sessionId: Long
+    ): List<AttendanceRecord>
 
-    val timestamp: Long
-)
+    @Query(
+        """
+        DELETE FROM attendance_records
+        WHERE sessionId = :sessionId
+        """
+    )
+    suspend fun deleteRecordsForSession(
+        sessionId: Long
+    )
+}
