@@ -37,14 +37,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            QuickAttendMainContent(viewModel = viewModel)
+            QuickAttendMainContent(
+                viewModel = viewModel
+            )
         }
     }
 }
 
 @Composable
-fun QuickAttendMainContent(viewModel: MainViewModel) {
-
+fun QuickAttendMainContent(
+    viewModel: MainViewModel
+) {
     val context = LocalContext.current
 
     var themeMode by remember(context) {
@@ -82,11 +85,11 @@ private fun QuickAttendMainScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
-
     val context = LocalContext.current
 
     val todaySessions by viewModel.todaySessions.collectAsState()
     val historySessions by viewModel.historySessions.collectAsState()
+
     val activeSession by viewModel.activeSession.collectAsState()
     val activeStudents by viewModel.activeStudents.collectAsState()
     val activeRecords by viewModel.activeRecords.collectAsState()
@@ -114,8 +117,15 @@ private fun QuickAttendMainScreen(
             SnackbarHost(
                 hostState = snackbarHostState
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
+
+        /*
+         * paddingValues is intentionally available from Scaffold.
+         * Individual screens manage their own content spacing so that
+         * their top bars and cards remain visually consistent.
+         */
 
         val currentSession = activeSession
 
@@ -123,10 +133,10 @@ private fun QuickAttendMainScreen(
 
             val isCompleted =
                 currentSession.status == "COMPLETED" ||
-                        (
-                                currentSession.currentIndex >= currentSession.totalStudents &&
-                                        currentSession.totalStudents > 0
-                                )
+                (
+                    currentSession.currentIndex >= currentSession.totalStudents &&
+                    currentSession.totalStudents > 0
+                )
 
             if (isCompleted) {
 
@@ -134,12 +144,14 @@ private fun QuickAttendMainScreen(
                     session = currentSession,
                     students = activeStudents,
                     records = activeRecords,
+
                     onExportExcel = {
                         viewModel.exportExcel(
-                            context,
-                            currentSession
+                            context = context,
+                            session = currentSession
                         )
                     },
+
                     onBack = {
                         viewModel.closeActiveSession()
                     }
@@ -151,15 +163,18 @@ private fun QuickAttendMainScreen(
                     session = currentSession,
                     students = activeStudents,
                     records = activeRecords,
+
                     onRecordAttendance = { studentId, isPresent ->
                         viewModel.recordAttendance(
-                            studentId,
-                            isPresent
+                            studentId = studentId,
+                            isPresent = isPresent
                         )
                     },
+
                     onUndo = {
                         viewModel.undoLastAttendance()
                     },
+
                     onBack = {
                         viewModel.closeActiveSession()
                     }
@@ -177,11 +192,15 @@ private fun QuickAttendMainScreen(
                 },
 
                 onSessionSelect = { session ->
-                    viewModel.startOrResumeSession(session)
+                    viewModel.startOrResumeSession(
+                        session = session
+                    )
                 },
 
                 onDeleteSession = { sessionId ->
-                    viewModel.deleteSession(sessionId)
+                    viewModel.deleteSession(
+                        sessionId = sessionId
+                    )
                 },
 
                 themeMode = themeMode,
@@ -190,6 +209,9 @@ private fun QuickAttendMainScreen(
             )
         }
 
+        /*
+         * Create Session Dialog
+         */
         if (showCreateDialog) {
 
             CreateSessionDialog(
@@ -198,25 +220,32 @@ private fun QuickAttendMainScreen(
                 },
 
                 onFileSelected = { uri, fileName, sectionName ->
+
+                    showCreateDialog = false
+
                     viewModel.onFileSelected(
-                        context,
-                        uri,
-                        fileName,
-                        sectionName
+                        context = context,
+                        uri = uri,
+                        fileName = fileName,
+                        sectionName = sectionName
                     )
                 }
             )
         }
 
+        /*
+         * Column Mapping Dialog
+         */
         columnMappingRequired?.let { mapping ->
 
             ColumnMappingDialog(
                 mappingData = mapping,
 
                 onConfirm = { idColumn, nameColumn ->
+
                     viewModel.confirmColumnMapping(
-                        idColumn,
-                        nameColumn
+                        idColumn = idColumn,
+                        nameColumn = nameColumn
                     )
                 },
 
