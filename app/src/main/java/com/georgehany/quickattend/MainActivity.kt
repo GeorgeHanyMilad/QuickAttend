@@ -25,6 +25,8 @@ import com.georgehany.quickattend.ui.screens.CreateSessionDialog
 import com.georgehany.quickattend.ui.screens.HomeScreen
 import com.georgehany.quickattend.ui.screens.SummaryScreen
 import com.georgehany.quickattend.ui.theme.QuickAttendTheme
+import com.georgehany.quickattend.ui.theme.ThemeMode
+import com.georgehany.quickattend.ui.theme.ThemePreferences
 import com.georgehany.quickattend.ui.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -34,22 +36,55 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-    setContent {
-            QuickAttendTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    QuickAttendMainContent(viewModel = viewModel)
-                }
-            }
+        setContent {
+            QuickAttendMainContent(viewModel = viewModel)
         }
     }
 }
 
 @Composable
 fun QuickAttendMainContent(viewModel: MainViewModel) {
+
     val context = LocalContext.current
+
+    var themeMode by remember(context) {
+        mutableStateOf(
+            ThemePreferences.getThemeMode(context)
+        )
+    }
+
+    QuickAttendTheme(
+        themeMode = themeMode
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            QuickAttendMainScreen(
+                viewModel = viewModel,
+                themeMode = themeMode,
+                onThemeModeChange = { newThemeMode ->
+                    themeMode = newThemeMode
+
+                    ThemePreferences.saveThemeMode(
+                        context = context,
+                        themeMode = newThemeMode
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickAttendMainScreen(
+    viewModel: MainViewModel,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
+
+    val context = LocalContext.current
+
     val todaySessions by viewModel.todaySessions.collectAsState()
     val historySessions by viewModel.historySessions.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
@@ -59,75 +94,135 @@ fun QuickAttendMainContent(viewModel: MainViewModel) {
     val columnMappingRequired by viewModel.columnMappingRequired.collectAsState()
     val uiMessage by viewModel.uiMessage.collectAsState()
 
-    var showCreateDialog by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showCreateDialog by remember {
+        mutableStateOf(false)
+    }
+
+    val snackbarHostState = remember {
+        SnackbarHostState()
+    }
 
     LaunchedEffect(uiMessage) {
-        uiMessage?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
+        uiMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
             viewModel.clearUiMessage()
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState
+            )
+        }
     ) { paddingValues ->
+
         val currentSession = activeSession
 
         if (currentSession != null) {
-            val isCompleted = currentSession.status == "COMPLETED" ||
-                    (currentSession.currentIndex >= currentSession.totalStudents && currentSession.totalStudents > 0)
+
+            val isCompleted =
+                currentSession.status == "COMPLETED" ||
+                        (
+                                currentSession.currentIndex >= currentSession.totalStudents &&
+                                        currentSession.totalStudents > 0
+                                )
 
             if (isCompleted) {
+
                 SummaryScreen(
                     session = currentSession,
                     students = activeStudents,
                     records = activeRecords,
-                    onExportExcel = { viewModel.exportExcel(context, currentSession) },
-                    onBack = { viewModel.closeActiveSession() }
+                    onExportExcel = {
+                        viewModel.exportExcel(
+                            context,
+                            currentSession
+                        )
+                    },
+                    onBack = {
+                        viewModel.closeActiveSession()
+                    }
                 )
+
             } else {
+
                 AttendanceScreen(
                     session = currentSession,
                     students = activeStudents,
                     records = activeRecords,
                     onRecordAttendance = { studentId, isPresent ->
-                        viewModel.recordAttendance(studentId, isPresent)
+                        viewModel.recordAttendance(
+                            studentId,
+                            isPresent
+                        )
                     },
-                    onUndo = { viewModel.undoLastAttendance() },
-                    onBack = { viewModel.closeActiveSession() }
+                    onUndo = {
+                        viewModel.undoLastAttendance()
+                    },
+                    onBack = {
+                        viewModel.closeActiveSession()
+                    }
                 )
             }
+
         } else {
+
             HomeScreen(
                 todaySessions = todaySessions,
                 historySessions = historySessions,
-                onStartOrCreateSessionClick = { showCreateDialog = true },
+
+                onStartOrCreateSessionClick = {
+                    showCreateDialog = true
+                },
+
                 onSessionSelect = { session ->
                     viewModel.startOrResumeSession(session)
                 },
+
                 onDeleteSession = { sessionId ->
                     viewModel.deleteSession(sessionId)
-                }
+                },
+
+                themeMode = themeMode,
+
+                onThemeModeChange = onThemeModeChange
             )
         }
 
         if (showCreateDialog) {
+
             CreateSessionDialog(
-                onDismiss = { showCreateDialog = false },
+                onDismiss = {
+                    showCreateDialog = false
+                },
+
                 onFileSelected = { uri, fileName, sectionName ->
-                    viewModel.onFileSelected(context, uri, fileName, sectionName)
+                    viewModel.onFileSelected(
+                        context,
+                        uri,
+                        fileName,
+                        sectionName
+                    )
                 }
             )
         }
 
         columnMappingRequired?.let { mapping ->
+
             ColumnMappingDialog(
                 mappingData = mapping,
-                onConfirm = { idCol, nameCol ->
-                    viewModel.confirmColumnMapping(idCol, nameCol)
+
+                onConfirm = { idColumn, nameColumn ->
+                    viewModel.confirmColumnMapping(
+                        idColumn,
+                        nameColumn
+                    )
                 },
-                onDismiss = { viewModel.dismissColumnMapping() }
+
+                onDismiss = {
+                    viewModel.dismissColumnMapping()
+                }
             )
         }
     }
