@@ -1,4 +1,4 @@
-package com.georgehany.quickattend.data.local.entity
+package com.georgehany.quickattend.data.local
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -15,12 +15,17 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("sessionId")]
+    indices = [
+        Index(value = ["sessionId"])
+    ]
 )
 data class Student(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+
     val sessionId: Long,
+
     val studentId: String,
-    val studentName: String,
-    val sequenceOrder: Int
+
+    val name: String
 )
