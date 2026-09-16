@@ -1,3 +1,4 @@
+```kotlin
 package com.georgehany.quickattend.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -10,110 +11,106 @@ import androidx.compose.runtime.Composable
 // QuickAttend Material 3 Theme
 // ============================================================
 
-// ------------------------------------------------------------
-// Light Color Scheme
-// ------------------------------------------------------------
-
 private val QuickAttendLightColorScheme = lightColorScheme(
 
     // Primary
-    primary = NavyPrimary,
-    onPrimary = NavyOnPrimary,
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
 
-    primaryContainer = NavyContainer,
-    onPrimaryContainer = NavyOnContainer,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
 
-    // Secondary / Accent
-    secondary = AccentBlue,
-    onSecondary = PureWhite,
+    // Secondary
+    secondary = LightSecondary,
+    onSecondary = LightOnSecondary,
 
-    secondaryContainer = AccentBlueLight,
-    onSecondaryContainer = AccentBlueDark,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
 
     // Background
-    background = NeutralBackground,
-    onBackground = NeutralOnSurface,
+    background = LightBackground,
+    onBackground = LightOnBackground,
 
-    // Surfaces
-    surface = NeutralSurface,
-    onSurface = NeutralOnSurface,
+    // Surface
+    surface = LightSurface,
+    onSurface = LightOnSurface,
 
-    surfaceVariant = NeutralSurfaceSecondary,
-    onSurfaceVariant = NeutralOnSurfaceSecondary,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceSecondary,
 
-    // Borders
-    outline = NeutralOutline,
-    outlineVariant = NeutralVariant,
+    // Outline
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
 
     // Error
-    error = RedNotPresent,
+    error = ErrorRed,
     onError = PureWhite,
 
-    errorContainer = RedContainer,
-    onErrorContainer = RedOnContainer,
+    errorContainer = ErrorContainer,
+    onErrorContainer = ErrorOnContainer,
 
-    // Inverse colors
-    inverseSurface = NeutralOnSurface,
+    // Inverse
+    inverseSurface = LightOnSurface,
     inverseOnSurface = PureWhite,
-    inversePrimary = AccentBlueLight,
-
-    // Scrim
-    scrim = PureBlack
-)
-
-// ------------------------------------------------------------
-// Dark Color Scheme
-// ------------------------------------------------------------
-
-private val QuickAttendDarkColorScheme = darkColorScheme(
-
-    // Primary
-    primary = DarkNavyPrimary,
-    onPrimary = DarkNavyOnPrimary,
-
-    primaryContainer = DarkNavyPrimaryContainer,
-    onPrimaryContainer = DarkNavyOnContainer,
-
-    // Secondary / Accent
-    secondary = DarkAccentBlue,
-    onSecondary = DarkNavyOnPrimary,
-
-    secondaryContainer = DarkAccentBlueContainer,
-    onSecondaryContainer = DarkAccentBlueOnContainer,
-
-    // Background
-    background = DarkBackground,
-    onBackground = DarkOnSurface,
-
-    // Surfaces
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-
-    surfaceVariant = DarkSurfaceSecondary,
-    onSurfaceVariant = DarkOnSurfaceSecondary,
-
-    // Borders
-    outline = DarkNeutralOutline,
-    outlineVariant = DarkNeutralVariant,
-
-    // Error
-    error = DarkRedNotPresent,
-    onError = DarkRedOnContainer,
-
-    errorContainer = DarkRedContainer,
-    onErrorContainer = DarkRedOnContainer,
-
-    // Inverse colors
-    inverseSurface = DarkOnSurface,
-    inverseOnSurface = DarkBackground,
-    inversePrimary = DarkNavyPrimary,
+    inversePrimary = LightPrimaryContainer,
 
     // Scrim
     scrim = PureBlack
 )
 
 // ============================================================
-// Theme Mode
+// DARK COLOR SCHEME
+// ============================================================
+
+private val QuickAttendDarkColorScheme = darkColorScheme(
+
+    // Primary
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+
+    // Secondary
+    secondary = DarkSecondary,
+    onSecondary = DarkOnSecondary,
+
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+
+    // Background
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+
+    // Surface
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceSecondary,
+
+    // Outline
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
+
+    // Error
+    error = DarkErrorRed,
+    onError = DarkErrorContainer,
+
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkErrorOnContainer,
+
+    // Inverse
+    inverseSurface = DarkOnSurface,
+    inverseOnSurface = DarkBackground,
+    inversePrimary = DarkPrimary,
+
+    // Scrim
+    scrim = PureBlack
+)
+
+// ============================================================
+// THEME MODE
 // ============================================================
 
 enum class ThemeMode {
@@ -123,7 +120,7 @@ enum class ThemeMode {
 }
 
 // ============================================================
-// QuickAttend Theme
+// QUICKATTEND THEME
 // ============================================================
 
 @Composable
@@ -131,9 +128,13 @@ fun QuickAttendTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
+
     val darkTheme = when (themeMode) {
+
         ThemeMode.LIGHT -> false
+
         ThemeMode.DARK -> true
+
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
@@ -147,3 +148,4 @@ fun QuickAttendTheme(
         content = content
     )
 }
+```
