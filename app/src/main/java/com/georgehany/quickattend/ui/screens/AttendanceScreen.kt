@@ -1,9 +1,11 @@
+```kotlin
 package com.georgehany.quickattend.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,20 +51,15 @@ import androidx.compose.ui.unit.sp
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
 import com.georgehany.quickattend.data.local.entity.Student
-import com.georgehany.quickattend.ui.theme.AmberWarningContainer
-import com.georgehany.quickattend.ui.theme.EmeraldContainer
-import com.georgehany.quickattend.ui.theme.EmeraldOnContainer
+import com.georgehany.quickattend.ui.theme.DarkAmberWarning
+import com.georgehany.quickattend.ui.theme.DarkEmeraldPresent
+import com.georgehany.quickattend.ui.theme.DarkRedNotPresent
 import com.georgehany.quickattend.ui.theme.EmeraldPresent
-import com.georgehany.quickattend.ui.theme.NavyContainer
-import com.georgehany.quickattend.ui.theme.NavyOnContainer
-import com.georgehany.quickattend.ui.theme.NavyPrimary
-import com.georgehany.quickattend.ui.theme.NeutralOnSurfaceSecondary
-import com.georgehany.quickattend.ui.theme.NeutralOnSurfaceTertiary
-import com.georgehany.quickattend.ui.theme.NeutralVariant
-import com.georgehany.quickattend.ui.theme.RedContainer
 import com.georgehany.quickattend.ui.theme.RedNotPresent
-import com.georgehany.quickattend.ui.theme.RedOnContainer
-import com.georgehany.quickattend.ui.theme.PureWhite
+
+// ============================================================
+// QuickAttend Attendance Screen
+// ============================================================
 
 @Composable
 fun AttendanceScreen(
@@ -80,19 +79,24 @@ fun AttendanceScreen(
 
     val currentStudent = students.getOrNull(currentIndex)
 
-    val presentCount = records.values.count { it.isPresent }
+    val presentCount =
+        records.values.count { it.isPresent }
 
-    val notPresentCount = records.values.count { !it.isPresent }
+    val absentCount =
+        records.values.count { !it.isPresent }
 
-    val completedCount = presentCount + notPresentCount
+    val completedCount =
+        presentCount + absentCount
 
-    val progress = if (totalStudents > 0) {
-        completedCount.toFloat() / totalStudents.toFloat()
-    } else {
-        0f
-    }
+    val progress =
+        if (totalStudents > 0) {
+            completedCount.toFloat() / totalStudents.toFloat()
+        } else {
+            0f
+        }
 
-    val progressPercent = (progress * 100).toInt()
+    val progressPercent =
+        (progress * 100).toInt()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -100,6 +104,7 @@ fun AttendanceScreen(
             AttendanceTopBar(
                 sectionName = session.sectionName,
                 currentIndex = currentIndex,
+                totalStudents = totalStudents,
                 onBack = onBack,
                 onUndo = onUndo
             )
@@ -112,14 +117,9 @@ fun AttendanceScreen(
                 .padding(paddingValues)
                 .padding(
                     horizontal = 18.dp,
-                    vertical = 14.dp
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally
+                    vertical = 16.dp
+                )
         ) {
-
-            // --------------------------------------------------
-            // Progress Header
-            // --------------------------------------------------
 
             ProgressSection(
                 currentIndex = currentIndex,
@@ -128,22 +128,19 @@ fun AttendanceScreen(
                 progressPercent = progressPercent
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // --------------------------------------------------
-            // Attendance Statistics
-            // --------------------------------------------------
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
 
             AttendanceStats(
                 presentCount = presentCount,
-                notPresentCount = notPresentCount
+                absentCount = absentCount,
+                totalStudents = totalStudents
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --------------------------------------------------
-            // Student Card
-            // --------------------------------------------------
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
 
             if (currentStudent != null) {
 
@@ -173,20 +170,22 @@ fun AttendanceScreen(
                     .height(12.dp)
             )
 
-            // --------------------------------------------------
-            // Attendance Actions
-            // --------------------------------------------------
-
             AttendanceActions(
                 enabled = currentStudent != null,
                 onPresent = {
                     currentStudent?.let {
-                        onRecordAttendance(it.studentId, true)
+                        onRecordAttendance(
+                            it.studentId,
+                            true
+                        )
                     }
                 },
-                onNotPresent = {
+                onAbsent = {
                     currentStudent?.let {
-                        onRecordAttendance(it.studentId, false)
+                        onRecordAttendance(
+                            it.studentId,
+                            false
+                        )
                     }
                 },
                 onUndo = onUndo,
@@ -197,78 +196,121 @@ fun AttendanceScreen(
 }
 
 // ============================================================
-// Top Bar
+// TOP BAR
 // ============================================================
 
 @Composable
 private fun AttendanceTopBar(
     sectionName: String,
     currentIndex: Int,
+    totalStudents: Int,
     onBack: () -> Unit,
     onUndo: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(NavyPrimary)
-            .padding(
-                start = 8.dp,
-                end = 8.dp,
-                top = 10.dp,
-                bottom = 12.dp
-            ),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
 
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.size(44.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 6.dp,
+                    end = 8.dp,
+                    top = 8.dp,
+                    bottom = 10.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = PureWhite
-            )
-        }
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = sectionName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PureWhite,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = "Attendance Session",
-                style = MaterialTheme.typography.bodySmall,
-                color = PureWhite.copy(alpha = 0.68f)
-            )
-        }
-
-        if (currentIndex > 0) {
             IconButton(
-                onClick = onUndo,
+                onClick = onBack,
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Undo,
-                    contentDescription = "Undo",
-                    tint = PureWhite
+                    imageVector =
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = sectionName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text = "Attendance Session",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (totalStudents > 0) {
+
+                Box(
+                    modifier = Modifier
+                        .clip(
+                            RoundedCornerShape(10.dp)
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer
+                        )
+                        .padding(
+                            horizontal = 10.dp,
+                            vertical = 7.dp
+                        )
+                ) {
+
+                    Text(
+                        text =
+                            "${currentIndex + 1}/$totalStudents",
+                        style = MaterialTheme.typography.labelMedium,
+                        color =
+                            MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (currentIndex > 0) {
+
+                IconButton(
+                    onClick = onUndo,
+                    modifier = Modifier.size(44.dp)
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Undo,
+                        contentDescription = "Undo",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
 }
 
 // ============================================================
-// Progress Section
+// PROGRESS SECTION
 // ============================================================
 
 @Composable
@@ -290,54 +332,70 @@ private fun ProgressSection(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+
                 Text(
                     text = "Attendance Progress",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
 
                 Text(
-                    text = if (totalStudents > 0) {
-                        "Student ${currentIndex + 1} of $totalStudents"
-                    } else {
-                        "No students"
-                    },
+                    text =
+                        if (totalStudents > 0) {
+                            "Recording student ${currentIndex + 1} of $totalStudents"
+                        } else {
+                            "No students available"
+                        },
                     style = MaterialTheme.typography.bodySmall,
-                    color = NeutralOnSurfaceSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Text(
                 text = "$progressPercent%",
                 style = MaterialTheme.typography.titleLarge,
-                color = NavyPrimary
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(9.dp))
+        Spacer(
+            modifier = Modifier.height(9.dp)
+        )
 
         LinearProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
+            progress = {
+                progress.coerceIn(
+                    0f,
+                    1f
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .clip(RoundedCornerShape(10.dp)),
-            color = NavyPrimary,
-            trackColor = NeutralVariant
+                .clip(
+                    RoundedCornerShape(10.dp)
+                ),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
     }
 }
 
 // ============================================================
-// Attendance Statistics
+// ATTENDANCE STATS
 // ============================================================
 
 @Composable
 private fun AttendanceStats(
     presentCount: Int,
-    notPresentCount: Int
+    absentCount: Int,
+    totalStudents: Int
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -345,80 +403,120 @@ private fun AttendanceStats(
     ) {
 
         AttendanceStatCard(
+            modifier = Modifier.weight(1f),
             label = "Present",
             value = presentCount.toString(),
             icon = Icons.Default.Check,
-            backgroundColor = EmeraldContainer,
-            contentColor = EmeraldOnContainer,
-            modifier = Modifier.weight(1f)
+            lightColor = EmeraldPresent,
+            darkColor = DarkEmeraldPresent
         )
 
         AttendanceStatCard(
-            label = "Not Present",
-            value = notPresentCount.toString(),
+            modifier = Modifier.weight(1f),
+            label = "Absent",
+            value = absentCount.toString(),
             icon = Icons.Default.Close,
-            backgroundColor = RedContainer,
-            contentColor = RedOnContainer,
-            modifier = Modifier.weight(1f)
+            lightColor = RedNotPresent,
+            darkColor = DarkRedNotPresent
+        )
+
+        AttendanceStatCard(
+            modifier = Modifier.weight(1f),
+            label = "Total",
+            value = totalStudents.toString(),
+            icon = Icons.Default.Groups,
+            lightColor = MaterialTheme.colorScheme.primary,
+            darkColor = MaterialTheme.colorScheme.primary
         )
     }
 }
 
+// ============================================================
+// STAT CARD
+// ============================================================
+
 @Composable
 private fun AttendanceStatCard(
+    modifier: Modifier,
     label: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    backgroundColor: Color,
-    contentColor: Color,
-    modifier: Modifier = Modifier
+    lightColor: Color,
+    darkColor: Color
 ) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(backgroundColor)
-            .padding(
-                horizontal = 13.dp,
-                vertical = 11.dp
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    val isDark =
+        MaterialTheme.colorScheme.background ==
+                Color(0xFF0B1220)
 
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(PureWhite.copy(alpha = 0.65f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(18.dp)
-            )
+    val accentColor =
+        if (isDark) {
+            darkColor
+        } else {
+            lightColor
         }
 
-        Spacer(modifier = Modifier.width(9.dp))
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
 
-        Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 8.dp,
+                    vertical = 12.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        accentColor.copy(
+                            alpha = 0.12f
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                color = contentColor
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
             )
 
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = contentColor.copy(alpha = 0.85f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
 // ============================================================
-// Current Student Card
+// CURRENT STUDENT
 // ============================================================
 
 @Composable
@@ -431,10 +529,15 @@ private fun CurrentStudentCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = PureWhite
+            containerColor =
+                MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
+            defaultElevation = 1.dp
         )
     ) {
 
@@ -443,95 +546,109 @@ private fun CurrentStudentCard(
                 .fillMaxWidth()
                 .padding(
                     horizontal = 24.dp,
-                    vertical = 26.dp
+                    vertical = 28.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Student icon
-
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(76.dp)
                     .clip(CircleShape)
-                    .background(NavyContainer),
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer
+                    ),
                 contentAlignment = Alignment.Center
             ) {
+
                 Icon(
-                    imageVector = Icons.Default.Groups,
+                    imageVector = Icons.Default.HowToReg,
                     contentDescription = null,
-                    tint = NavyOnContainer,
-                    modifier = Modifier.size(32.dp)
+                    tint =
+                        MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(38.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
 
             Text(
                 text = "CURRENT STUDENT",
                 style = MaterialTheme.typography.labelSmall,
-                color = NeutralOnSurfaceTertiary,
-                letterSpacing = 1.2.sp
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.3.sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
 
             Text(
                 text = student.studentName,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NavyContainer)
-                    .padding(
-                        horizontal = 15.dp,
-                        vertical = 8.dp
-                    )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
+
                 Text(
                     text = "ID  •  ${student.studentId}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = NavyOnContainer
+                    color =
+                        MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(
+                        horizontal = 15.dp,
+                        vertical = 8.dp
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(13.dp)
+            )
 
             Text(
-                text = if (totalStudents > 0) {
-                    "${currentIndex + 1} / $totalStudents"
-                } else {
-                    ""
-                },
+                text =
+                    if (totalStudents > 0) {
+                        "Student ${currentIndex + 1} of $totalStudents"
+                    } else {
+                        ""
+                    },
                 style = MaterialTheme.typography.bodySmall,
-                color = NeutralOnSurfaceTertiary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
 // ============================================================
-// Completed State
+// COMPLETED STATE
 // ============================================================
 
 @Composable
 private fun AllStudentsCompletedCard() {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = EmeraldContainer
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
+        color = MaterialTheme.colorScheme.primaryContainer,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(
+                alpha = 0.18f
+            )
         )
     ) {
 
@@ -544,47 +661,62 @@ private fun AllStudentsCompletedCard() {
 
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
-                    .background(PureWhite.copy(alpha = 0.7f)),
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(
+                            alpha = 0.75f
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
+
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = EmeraldPresent,
-                    modifier = Modifier.size(34.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(35.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(
+                modifier = Modifier.height(15.dp)
+            )
 
             Text(
                 text = "Attendance Completed",
                 style = MaterialTheme.typography.headlineSmall,
-                color = EmeraldOnContainer
+                color =
+                    MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(
+                modifier = Modifier.height(5.dp)
+            )
 
             Text(
-                text = "All students have been recorded.",
+                text = "All students have been recorded successfully.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = EmeraldOnContainer.copy(alpha = 0.8f)
+                color =
+                    MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                        alpha = 0.78f
+                    ),
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 // ============================================================
-// Attendance Actions
+// ATTENDANCE ACTIONS
 // ============================================================
 
 @Composable
 private fun AttendanceActions(
     enabled: Boolean,
     onPresent: () -> Unit,
-    onNotPresent: () -> Unit,
+    onAbsent: () -> Unit,
     onUndo: () -> Unit,
     undoEnabled: Boolean
 ) {
@@ -607,27 +739,33 @@ private fun AttendanceActions(
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = EmeraldPresent,
-                    contentColor = PureWhite,
-                    disabledContainerColor = EmeraldContainer,
-                    disabledContentColor = EmeraldOnContainer
+                    contentColor = Color.White,
+                    disabledContainerColor =
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor =
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
+
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
                     modifier = Modifier.size(27.dp)
                 )
 
-                Spacer(modifier = Modifier.width(7.dp))
+                Spacer(
+                    modifier = Modifier.width(7.dp)
+                )
 
                 Text(
                     text = "Present",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Button(
-                onClick = onNotPresent,
+                onClick = onAbsent,
                 enabled = enabled,
                 modifier = Modifier
                     .weight(1f)
@@ -635,22 +773,28 @@ private fun AttendanceActions(
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = RedNotPresent,
-                    contentColor = PureWhite,
-                    disabledContainerColor = RedContainer,
-                    disabledContentColor = RedOnContainer
+                    contentColor = Color.White,
+                    disabledContainerColor =
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor =
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
+
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = null,
                     modifier = Modifier.size(27.dp)
                 )
 
-                Spacer(modifier = Modifier.width(7.dp))
+                Spacer(
+                    modifier = Modifier.width(7.dp)
+                )
 
                 Text(
                     text = "Absent",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -660,25 +804,36 @@ private fun AttendanceActions(
             enabled = undoEnabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(46.dp),
-            shape = RoundedCornerShape(13.dp),
+                .height(48.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = NeutralVariant,
-                contentColor = NeutralOnSurfaceSecondary,
-                disabledContainerColor = NeutralVariant.copy(alpha = 0.55f),
-                disabledContentColor = NeutralOnSurfaceTertiary.copy(alpha = 0.55f)
+                containerColor =
+                    MaterialTheme.colorScheme.surfaceVariant,
+                contentColor =
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledContainerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0.55f
+                    ),
+                disabledContentColor =
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = 0.45f
+                    )
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 0.dp
             )
         ) {
+
             Icon(
                 imageVector = Icons.Default.Undo,
                 contentDescription = null,
                 modifier = Modifier.size(19.dp)
             )
 
-            Spacer(modifier = Modifier.width(7.dp))
+            Spacer(
+                modifier = Modifier.width(7.dp)
+            )
 
             Text(
                 text = "Undo Previous",
@@ -687,3 +842,4 @@ private fun AttendanceActions(
         }
     }
 }
+```
