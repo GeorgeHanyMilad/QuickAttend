@@ -1,4 +1,4 @@
-package com.georgehany.quickattend.data.local
+package com.georgehany.quickattend.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
