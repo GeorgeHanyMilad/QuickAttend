@@ -2,14 +2,10 @@ package com.georgehany.quickattend.ui.theme
 
 import android.content.Context
 
-// ============================================================
-// QuickAttend Theme Preferences
-// ============================================================
-
-private const val PREFS_NAME = "quickattend_preferences"
-private const val THEME_MODE_KEY = "theme_mode"
-
 object ThemePreferences {
+
+    private const val PREFS_NAME = "quick_attend_preferences"
+    private const val KEY_THEME_MODE = "theme_mode"
 
     fun getThemeMode(context: Context): ThemeMode {
         val preferences = context.getSharedPreferences(
@@ -17,15 +13,10 @@ object ThemePreferences {
             Context.MODE_PRIVATE
         )
 
-        return when (
-            preferences.getString(
-                THEME_MODE_KEY,
-                ThemeMode.SYSTEM.name
-            )
-        ) {
-            ThemeMode.LIGHT.name -> ThemeMode.LIGHT
+        return when (preferences.getString(KEY_THEME_MODE, ThemeMode.LIGHT.name)) {
             ThemeMode.DARK.name -> ThemeMode.DARK
-            else -> ThemeMode.SYSTEM
+            ThemeMode.SYSTEM.name -> ThemeMode.SYSTEM
+            else -> ThemeMode.LIGHT
         }
     }
 
@@ -38,10 +29,7 @@ object ThemePreferences {
             Context.MODE_PRIVATE
         )
             .edit()
-            .putString(
-                THEME_MODE_KEY,
-                themeMode.name
-            )
+            .putString(KEY_THEME_MODE, themeMode.name)
             .apply()
     }
 }
