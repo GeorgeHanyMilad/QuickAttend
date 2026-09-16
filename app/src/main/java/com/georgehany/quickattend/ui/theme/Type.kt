@@ -1,3 +1,4 @@
+```kotlin
 package com.georgehany.quickattend.ui.theme
 
 import androidx.compose.material3.Typography
@@ -7,30 +8,68 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // ============================================================
-// QuickAttend Typography
+// QuickAttend Typography System
+// ============================================================
+//
+// Typography is designed for:
+// • University / academic dashboards
+// • Clear attendance workflows
+// • Professional data presentation
+// • Strong hierarchy
+// • Comfortable readability in Light & Dark modes
+//
 // ============================================================
 
 val Typography = Typography(
 
-    // Large page / hero titles
-    headlineLarge = TextStyle(
+    // --------------------------------------------------------
+    // Display
+    // --------------------------------------------------------
+
+    displayLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
+        fontSize = 36.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.7).sp
+    ),
+
+    displayMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Bold,
+        fontSize = 32.sp,
+        lineHeight = 38.sp,
+        letterSpacing = (-0.5).sp
+    ),
+
+    displaySmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
         letterSpacing = (-0.4).sp
     ),
 
-    // Section / screen titles
+    // --------------------------------------------------------
+    // Headlines
+    // --------------------------------------------------------
+
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.3).sp
+    ),
+
     headlineMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontSize = 23.sp,
+        lineHeight = 29.sp,
         letterSpacing = (-0.2).sp
     ),
 
-    // Smaller prominent headings
     headlineSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -39,7 +78,10 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
 
-    // Large card / app-bar titles
+    // --------------------------------------------------------
+    // Titles
+    // --------------------------------------------------------
+
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -48,7 +90,6 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
 
-    // Medium card titles
     titleMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
@@ -57,25 +98,26 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
 
-    // Small titles / labels
     titleSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        letterSpacing = 0.05.sp
     ),
 
-    // Main readable body text
+    // --------------------------------------------------------
+    // Body
+    // --------------------------------------------------------
+
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 23.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.sp
     ),
 
-    // Standard body text
     bodyMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -84,7 +126,6 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
 
-    // Supporting / secondary text
     bodySmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -93,30 +134,32 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
 
-    // Buttons / primary labels
+    // --------------------------------------------------------
+    // Labels
+    // --------------------------------------------------------
+
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
-        fontSize = 15.sp,
+        fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
 
-    // Compact labels
     labelMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
+        fontSize = 12.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.2.sp
     ),
 
-    // Tiny labels / status badges
     labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
-        fontSize = 11.sp,
-        lineHeight = 15.sp,
-        letterSpacing = 0.3.sp
+        fontSize = 10.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.35.sp
     )
 )
+```
