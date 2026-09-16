@@ -15,50 +15,53 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.georgehany.quickattend.R
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
 import com.georgehany.quickattend.data.local.entity.Student
+import com.georgehany.quickattend.ui.theme.AmberWarningContainer
 import com.georgehany.quickattend.ui.theme.EmeraldContainer
 import com.georgehany.quickattend.ui.theme.EmeraldOnContainer
 import com.georgehany.quickattend.ui.theme.EmeraldPresent
+import com.georgehany.quickattend.ui.theme.NavyContainer
+import com.georgehany.quickattend.ui.theme.NavyOnContainer
 import com.georgehany.quickattend.ui.theme.NavyPrimary
+import com.georgehany.quickattend.ui.theme.NeutralOnSurfaceSecondary
+import com.georgehany.quickattend.ui.theme.NeutralOnSurfaceTertiary
+import com.georgehany.quickattend.ui.theme.NeutralVariant
 import com.georgehany.quickattend.ui.theme.RedContainer
 import com.georgehany.quickattend.ui.theme.RedNotPresent
 import com.georgehany.quickattend.ui.theme.RedOnContainer
+import com.georgehany.quickattend.ui.theme.PureWhite
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     session: Session,
@@ -69,280 +72,618 @@ fun AttendanceScreen(
     onBack: () -> Unit
 ) {
     val totalStudents = session.totalStudents
-    val currentIndex = session.currentIndex.coerceIn(0, (totalStudents - 1).coerceAtLeast(0))
+
+    val currentIndex = session.currentIndex.coerceIn(
+        0,
+        (totalStudents - 1).coerceAtLeast(0)
+    )
+
     val currentStudent = students.getOrNull(currentIndex)
 
     val presentCount = records.values.count { it.isPresent }
+
     val notPresentCount = records.values.count { !it.isPresent }
 
+    val completedCount = presentCount + notPresentCount
+
+    val progress = if (totalStudents > 0) {
+        completedCount.toFloat() / totalStudents.toFloat()
+    } else {
+        0f
+    }
+
+    val progressPercent = (progress * 100).toInt()
+
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = session.sectionName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.app_branding_title),
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    if (currentIndex > 0) {
-                        IconButton(onClick = onUndo) {
-                            Icon(
-                                imageVector = Icons.Default.Undo,
-                                contentDescription = "Undo",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = NavyPrimary
-                )
+            AttendanceTopBar(
+                sectionName = session.sectionName,
+                currentIndex = currentIndex,
+                onBack = onBack,
+                onUndo = onUndo
             )
         }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(
+                    horizontal = 18.dp,
+                    vertical = 14.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Section: Progress & Stats Summary
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Student ${currentIndex + 1} of $totalStudents",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = NavyPrimary
-                    )
-                    Text(
-                        text = "${currentIndex} / $totalStudents Completed",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            // --------------------------------------------------
+            // Progress Header
+            // --------------------------------------------------
 
-                val progress = if (totalStudents > 0) currentIndex.toFloat() / totalStudents.toFloat() else 0f
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = NavyPrimary,
-                    trackColor = Color(0xFFE2E8F0)
-                )
+            ProgressSection(
+                currentIndex = currentIndex,
+                totalStudents = totalStudents,
+                progress = progress,
+                progressPercent = progressPercent
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-                // Stats Summary Bar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(EmeraldContainer, shape = RoundedCornerShape(12.dp))
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "✓ Present: $presentCount",
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldOnContainer,
-                            fontSize = 14.sp
-                        )
-                    }
+            // --------------------------------------------------
+            // Attendance Statistics
+            // --------------------------------------------------
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(RedContainer, shape = RoundedCornerShape(12.dp))
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "✕ Not Present: $notPresentCount",
-                            fontWeight = FontWeight.Bold,
-                            color = RedOnContainer,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
+            AttendanceStats(
+                presentCount = presentCount,
+                notPresentCount = notPresentCount
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Main Student Card (Strictly ONE Student at a time)
+            // --------------------------------------------------
+            // Student Card
+            // --------------------------------------------------
+
             if (currentStudent != null) {
+
                 AnimatedContent(
                     targetState = currentStudent,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    },
                     label = "StudentCardTransition"
                 ) { student ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "STUDENT NAME",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = student.studentName,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .background(Color(0xFFF1F5F9), shape = RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = "ID: ${student.studentId}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = NavyPrimary
-                                )
-                            }
-                        }
-                    }
+                    CurrentStudentCard(
+                        student = student,
+                        currentIndex = currentIndex,
+                        totalStudents = totalStudents
+                    )
                 }
+
             } else {
+
+                AllStudentsCompletedCard()
+            }
+
+            Spacer(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(12.dp)
+            )
+
+            // --------------------------------------------------
+            // Attendance Actions
+            // --------------------------------------------------
+
+            AttendanceActions(
+                enabled = currentStudent != null,
+                onPresent = {
+                    currentStudent?.let {
+                        onRecordAttendance(it.studentId, true)
+                    }
+                },
+                onNotPresent = {
+                    currentStudent?.let {
+                        onRecordAttendance(it.studentId, false)
+                    }
+                },
+                onUndo = onUndo,
+                undoEnabled = currentIndex > 0
+            )
+        }
+    }
+}
+
+// ============================================================
+// Top Bar
+// ============================================================
+
+@Composable
+private fun AttendanceTopBar(
+    sectionName: String,
+    currentIndex: Int,
+    onBack: () -> Unit,
+    onUndo: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(NavyPrimary)
+            .padding(
+                start = 8.dp,
+                end = 8.dp,
+                top = 10.dp,
+                bottom = 12.dp
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.size(44.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = PureWhite
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = sectionName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = PureWhite,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = "Attendance Session",
+                style = MaterialTheme.typography.bodySmall,
+                color = PureWhite.copy(alpha = 0.68f)
+            )
+        }
+
+        if (currentIndex > 0) {
+            IconButton(
+                onClick = onUndo,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Undo,
+                    contentDescription = "Undo",
+                    tint = PureWhite
+                )
+            }
+        }
+    }
+}
+
+// ============================================================
+// Progress Section
+// ============================================================
+
+@Composable
+private fun ProgressSection(
+    currentIndex: Int,
+    totalStudents: Int,
+    progress: Float,
+    progressPercent: Int
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom
+        ) {
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
-                    text = "All students recorded!",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = EmeraldPresent,
-                    fontWeight = FontWeight.Bold
+                    text = "Attendance Progress",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                Text(
+                    text = if (totalStudents > 0) {
+                        "Student ${currentIndex + 1} of $totalStudents"
+                    } else {
+                        "No students"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NeutralOnSurfaceSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "$progressPercent%",
+                style = MaterialTheme.typography.titleLarge,
+                color = NavyPrimary
+            )
+        }
 
-            // Bottom Buttons (Action Buttons + Undo Button)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        Spacer(modifier = Modifier.height(9.dp))
+
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(10.dp)),
+            color = NavyPrimary,
+            trackColor = NeutralVariant
+        )
+    }
+}
+
+// ============================================================
+// Attendance Statistics
+// ============================================================
+
+@Composable
+private fun AttendanceStats(
+    presentCount: Int,
+    notPresentCount: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+
+        AttendanceStatCard(
+            label = "Present",
+            value = presentCount.toString(),
+            icon = Icons.Default.Check,
+            backgroundColor = EmeraldContainer,
+            contentColor = EmeraldOnContainer,
+            modifier = Modifier.weight(1f)
+        )
+
+        AttendanceStatCard(
+            label = "Not Present",
+            value = notPresentCount.toString(),
+            icon = Icons.Default.Close,
+            backgroundColor = RedContainer,
+            contentColor = RedOnContainer,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun AttendanceStatCard(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    backgroundColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(backgroundColor)
+            .padding(
+                horizontal = 13.dp,
+                vertical = 11.dp
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(PureWhite.copy(alpha = 0.65f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(9.dp))
+
+        Column {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                color = contentColor
+            )
+
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
+// ============================================================
+// Current Student Card
+// ============================================================
+
+@Composable
+private fun CurrentStudentCard(
+    student: Student,
+    currentIndex: Int,
+    totalStudents: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PureWhite
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 26.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            // Student icon
+
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(NavyContainer),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Present Button
-                    Button(
-                        onClick = {
-                            if (currentStudent != null) {
-                                onRecordAttendance(currentStudent.studentId, true)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(64.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPresent)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(28.dp))
-                            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                            Text(text = "Present", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Not Present Button
-                    Button(
-                        onClick = {
-                            if (currentStudent != null) {
-                                onRecordAttendance(currentStudent.studentId, false)
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(64.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RedNotPresent)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(28.dp))
-                            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                            Text(text = "Not Present", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // Clearly Accessible Undo Button
-                OutlinedButton(
-                    onClick = onUndo,
-                    enabled = currentIndex > 0,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Undo, contentDescription = null)
-                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                    Text(
-                        text = "Undo Previous Student",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = NavyOnContainer,
+                    modifier = Modifier.size(32.dp)
+                )
             }
+
+            Spacer(modifier = Modifier.height(15.dp))
+
+            Text(
+                text = "CURRENT STUDENT",
+                style = MaterialTheme.typography.labelSmall,
+                color = NeutralOnSurfaceTertiary,
+                letterSpacing = 1.2.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = student.studentName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(NavyContainer)
+                    .padding(
+                        horizontal = 15.dp,
+                        vertical = 8.dp
+                    )
+            ) {
+                Text(
+                    text = "ID  •  ${student.studentId}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NavyOnContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = if (totalStudents > 0) {
+                    "${currentIndex + 1} / $totalStudents"
+                } else {
+                    ""
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = NeutralOnSurfaceTertiary
+            )
+        }
+    }
+}
+
+// ============================================================
+// Completed State
+// ============================================================
+
+@Composable
+private fun AllStudentsCompletedCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = EmeraldContainer
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(PureWhite.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = EmeraldPresent,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Attendance Completed",
+                style = MaterialTheme.typography.headlineSmall,
+                color = EmeraldOnContainer
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "All students have been recorded.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = EmeraldOnContainer.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+// ============================================================
+// Attendance Actions
+// ============================================================
+
+@Composable
+private fun AttendanceActions(
+    enabled: Boolean,
+    onPresent: () -> Unit,
+    onNotPresent: () -> Unit,
+    onUndo: () -> Unit,
+    undoEnabled: Boolean
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+
+            Button(
+                onClick = onPresent,
+                enabled = enabled,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(64.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = EmeraldPresent,
+                    contentColor = PureWhite,
+                    disabledContainerColor = EmeraldContainer,
+                    disabledContentColor = EmeraldOnContainer
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(27.dp)
+                )
+
+                Spacer(modifier = Modifier.width(7.dp))
+
+                Text(
+                    text = "Present",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            Button(
+                onClick = onNotPresent,
+                enabled = enabled,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(64.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RedNotPresent,
+                    contentColor = PureWhite,
+                    disabledContainerColor = RedContainer,
+                    disabledContentColor = RedOnContainer
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(27.dp)
+                )
+
+                Spacer(modifier = Modifier.width(7.dp))
+
+                Text(
+                    text = "Absent",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        }
+
+        Button(
+            onClick = onUndo,
+            enabled = undoEnabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp),
+            shape = RoundedCornerShape(13.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = NeutralVariant,
+                contentColor = NeutralOnSurfaceSecondary,
+                disabledContainerColor = NeutralVariant.copy(alpha = 0.55f),
+                disabledContentColor = NeutralOnSurfaceTertiary.copy(alpha = 0.55f)
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Undo,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp)
+            )
+
+            Spacer(modifier = Modifier.width(7.dp))
+
+            Text(
+                text = "Undo Previous",
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }
