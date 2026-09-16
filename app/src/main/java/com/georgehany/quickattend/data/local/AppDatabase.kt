@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.georgehany.quickattend.data.local.dao.AttendanceDao
+import com.georgehany.quickattend.data.local.entity.AttendanceRecord
+import com.georgehany.quickattend.data.local.entity.Session
+import com.georgehany.quickattend.data.local.entity.Student
 
 @Database(
     entities = [
@@ -16,10 +20,6 @@ import androidx.room.RoomDatabase
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun sessionDao(): SessionDao
-
-    abstract fun studentDao(): StudentDao
-
     abstract fun attendanceDao(): AttendanceDao
 
     companion object {
@@ -29,7 +29,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
@@ -37,8 +36,8 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .fallbackToDestructiveMigration()
                     .build()
-                    .also {
-                        INSTANCE = it
+                    .also { database ->
+                        INSTANCE = database
                     }
             }
         }
