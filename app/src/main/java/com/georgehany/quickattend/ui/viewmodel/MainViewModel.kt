@@ -7,18 +7,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.georgehany.quickattend.data.export.ExcelExporter
 import com.georgehany.quickattend.data.local.AppDatabase
-import com.georgehany.quickattend.data.local.AttendanceRecord
-import com.georgehany.quickattend.data.local.Session
-import com.georgehany.quickattend.data.local.Student
-import com.georgehany.quickattend.data.parser.ColumnMappingData
+import com.georgehany.quickattend.data.local.entity.AttendanceRecord
+import com.georgehany.quickattend.data.local.entity.Session
+import com.georgehany.quickattend.data.local.entity.Student
 import com.georgehany.quickattend.data.parser.FileImporter
+import com.georgehany.quickattend.data.parser.ImportParseResult
+import com.georgehany.quickattend.data.parser.RawStudent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -33,360 +34,279 @@ class MainViewModel(
     private val studentDao = database.studentDao()
     private val attendanceDao = database.attendanceDao()
 
-    private val dateFormatter = SimpleDateFormat(
-        "dd MMMM yyyy",
-        Locale.ENGLISH
-    )
+    private val _todaySessions = MutableStateFlow<List<Session>>(emptyList())
+    val todaySessions: StateFlow<List<Session>> = _todaySessions.asStateFlow()
 
-    /*
-     * ---------------------------------------------------------
-     * Sessions
-     * ---------------------------------------------------------
-     */
+    private val _historySessions = MutableStateFlow<List<Session>>(emptyList())
+    val historySessions: StateFlow<List<Session>> = _historySessions.asStateFlow()
 
-    val todaySessions: StateFlow<List<Session>> =
-        sessionDao.getAllSessions()
-            .map { sessions ->
-                val today = dateFormatter.format(Date())
+    private val _activeSession = MutableStateFlow<Session?>(null)
+    val activeSession: StateFlow<Session?> = _activeSession.asStateFlow()
 
-                sessions.filter { session ->
-                    session.date == today
-                }
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyList()
-            )
+    private val _activeStudents = MutableStateFlow<List<Student>>(emptyList())
+    val activeStudents: StateFlow<List<Student>> = _activeStudents.asStateFlow()
 
-    val historySessions: StateFlow<List<Session>> =
-        sessionDao.getAllSessions()
-            .map { sessions ->
-                val today = dateFormatter.format(Date())
-
-                sessions.filter { session ->
-                    session.date != today
-                }
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyList()
-            )
-
-    /*
-     * ---------------------------------------------------------
-     * Active Session
-     * ---------------------------------------------------------
-     */
-
-    private val _activeSession =
-        MutableStateFlow<Session?>(null)
-
-    val activeSession: StateFlow<Session?> =
-        _activeSession.asStateFlow()
-
-    private val _activeStudents =
-        MutableStateFlow<List<Student>>(emptyList())
-
-    val activeStudents: StateFlow<List<Student>> =
-        _activeStudents.asStateFlow()
-
-    private val _activeRecords =
-        MutableStateFlow<List<AttendanceRecord>>(emptyList())
-
-    val activeRecords: StateFlow<List<AttendanceRecord>> =
-        _activeRecords.asStateFlow()
-
-    /*
-     * ---------------------------------------------------------
-     * Column Mapping
-     * ---------------------------------------------------------
-     */
+    private val _activeRecords = MutableStateFlow<List<AttendanceRecord>>(emptyList())
+    val activeRecords: StateFlow<List<AttendanceRecord>> = _activeRecords.asStateFlow()
 
     private val _columnMappingRequired =
-        MutableStateFlow<ColumnMappingData?>(null)
+        MutableStateFlow<ImportParseResult.ColumnMappingRequired?>(null)
 
-    val columnMappingRequired: StateFlow<ColumnMappingData?> =
+    val columnMappingRequired: StateFlow<ImportParseResult.ColumnMappingRequired?> =
         _columnMappingRequired.asStateFlow()
 
-    private var pendingUri: Uri? = null
+    private val _uiMessage = MutableStateFlow<String?>(null)
+    val uiMessage: StateFlow<String?> = _uiMessage.asStateFlow()
 
+    private var pendingUri: Uri? = null
     private var pendingSectionName: String? = null
 
-    /*
-     * ---------------------------------------------------------
-     * UI Messages
-     * ---------------------------------------------------------
-     */
-
-    private val _uiMessage =
-        MutableStateFlow<String?>(null)
-
-    val uiMessage: StateFlow<String?> =
-        _uiMessage.asStateFlow()
-
-    fun clearUiMessage() {
-        _uiMessage.value = null
+    init {
+        observeSessions()
     }
 
-    private fun showMessage(message: String) {
-        _uiMessage.value = message
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * File Import
-     * ---------------------------------------------------------
-     */
-
-    fun onFileSelected(
-        context: Context,
-        uri: Uri,
-        fileName: String,
-        sectionName: String
-    ) {
+    private fun observeSessions() {
         viewModelScope.launch {
+            sessionDao.getAllSessions().collect { sessions ->
+                val today = getTodayDate()
 
-            try {
-
-                val result = FileImporter.parseFile(
-                    context = context,
-                    uri = uri,
-                    fileName = fileName
-                )
-
-                when (result) {
-
-                    is FileImporter.ParseResult.Success -> {
-
-                        createSessionFromRawStudents(
-                            sectionName = sectionName,
-                            students = result.students
-                        )
-                    }
-
-                    is FileImporter.ParseResult.MappingRequired -> {
-
-                        pendingUri = uri
-                        pendingSectionName = sectionName
-
-                        _columnMappingRequired.value =
-                            result.mappingData
-                    }
-
-                    is FileImporter.ParseResult.Error -> {
-
-                        showMessage(
-                            result.message
-                        )
-                    }
+                _todaySessions.value = sessions.filter {
+                    it.date == today
                 }
 
-            } catch (e: Exception) {
-
-                showMessage(
-                    e.message
-                        ?: "Unable to import the selected file."
-                )
+                _historySessions.value = sessions.filter {
+                    it.date != today
+                }
             }
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Confirm Column Mapping
-     * ---------------------------------------------------------
-     */
+    fun onFileSelected(
+        context: Context,
+        uri: Uri,
+        fileName: String?,
+        sectionName: String
+    ) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                FileImporter.parseFile(
+                    contentResolver = context.contentResolver,
+                    uri = uri,
+                    fileName = fileName
+                )
+            }
+
+            when (result) {
+
+                is ImportParseResult.Success -> {
+                    if (result.students.isEmpty()) {
+                        _uiMessage.value = "No students were found in the selected file."
+                        return@launch
+                    }
+
+                    createSessionFromRawStudents(
+                        sectionName = sectionName,
+                        students = result.students
+                    )
+                }
+
+                is ImportParseResult.ColumnMappingRequired -> {
+                    pendingUri = uri
+                    pendingSectionName = sectionName
+                    _columnMappingRequired.value = result
+                }
+
+                is ImportParseResult.Error -> {
+                    _uiMessage.value = result.message
+                }
+            }
+        }
+    }
 
     fun confirmColumnMapping(
         idColumn: Int,
         nameColumn: Int
     ) {
-        val uri = pendingUri
+        val mapping = _columnMappingRequired.value
         val sectionName = pendingSectionName
 
-        if (uri == null || sectionName.isNullOrBlank()) {
-            showMessage(
-                "Unable to continue. Please import the file again."
-            )
+        if (mapping == null || sectionName.isNullOrBlank()) {
+            _uiMessage.value = "Import information is no longer available."
             return
         }
 
         viewModelScope.launch {
-
-            try {
-
-                val context = getApplication<Application>()
-
-                val result =
-                    FileImporter.parseFileWithColumnMapping(
-                        context = context,
-                        uri = uri,
-                        idColumn = idColumn,
-                        nameColumn = nameColumn
-                    )
-
-                when (result) {
-
-                    is FileImporter.ParseResult.Success -> {
-
-                        createSessionFromRawStudents(
-                            sectionName = sectionName,
-                            students = result.students
-                        )
-
-                        clearPendingMapping()
-                    }
-
-                    is FileImporter.ParseResult.Error -> {
-
-                        showMessage(
-                            result.message
-                        )
-                    }
-
-                    is FileImporter.ParseResult.MappingRequired -> {
-
-                        showMessage(
-                            "Please select valid student ID and name columns."
-                        )
-                    }
-                }
-
-            } catch (e: Exception) {
-
-                showMessage(
-                    e.message
-                        ?: "Unable to process the selected columns."
+            val students = withContext(Dispatchers.Default) {
+                FileImporter.extractStudentsFromRows(
+                    rawRows = mapping.rawRows,
+                    startRowIndex = determineDataStartRow(mapping),
+                    idColIndex = idColumn,
+                    nameColIndex = nameColumn
                 )
             }
+
+            if (students.isEmpty()) {
+                _uiMessage.value = "No valid students were found using these columns."
+                return@launch
+            }
+
+            _columnMappingRequired.value = null
+            pendingUri = null
+            pendingSectionName = null
+
+            createSessionFromRawStudents(
+                sectionName = sectionName,
+                students = students
+            )
         }
     }
 
     fun dismissColumnMapping() {
-        clearPendingMapping()
-    }
-
-    private fun clearPendingMapping() {
+        _columnMappingRequired.value = null
         pendingUri = null
         pendingSectionName = null
-        _columnMappingRequired.value = null
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Create Session
-     * ---------------------------------------------------------
-     */
+    private fun determineDataStartRow(
+        mapping: ImportParseResult.ColumnMappingRequired
+    ): Int {
+        val firstRow = mapping.rawRows.firstOrNull()
 
-    private suspend fun createSessionFromRawStudents(
-        sectionName: String,
-        students: List<Student>
-    ) {
-        if (students.isEmpty()) {
-            showMessage(
-                "No students were found in the selected file."
-            )
-            return
+        if (firstRow != null) {
+            val idIndex = mapping.detectedIdColIndex
+            val nameIndex = mapping.detectedNameColIndex
+
+            if (idIndex != null && nameIndex != null) {
+                val idHeader = firstRow.getOrNull(idIndex)?.lowercase()?.trim()
+                val nameHeader = firstRow.getOrNull(nameIndex)?.lowercase()?.trim()
+
+                val hasHeaderWords =
+                    idHeader != null &&
+                    nameHeader != null &&
+                    (
+                        idHeader.contains("id") ||
+                            idHeader.contains("code") ||
+                            idHeader.contains("number") ||
+                            idHeader.contains("رقم") ||
+                            idHeader.contains("كود")
+                        ) &&
+                    (
+                        nameHeader.contains("name") ||
+                            nameHeader.contains("student") ||
+                            nameHeader.contains("اسم")
+                        )
+
+                if (hasHeaderWords) {
+                    return 1
+                }
+            }
         }
 
-        val currentDate =
-            dateFormatter.format(Date())
+        return 0
+    }
 
-        val session = Session(
-            sectionName = sectionName,
-            date = currentDate,
-            totalStudents = students.size,
-            currentIndex = 0,
-            status = "NOT_STARTED",
-            startTimeMs = null,
-            endTimeMs = null
-        )
+    private fun createSessionFromRawStudents(
+        sectionName: String,
+        students: List<RawStudent>
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
 
-        database.runInTransaction {
-
-            val sessionId =
-                sessionDao.insertSession(session)
-
-            val studentsWithSession =
-                students.map { student ->
-                    student.copy(
-                        sessionId = sessionId
-                    )
+            val cleanStudents = students
+                .filter {
+                    it.studentId.isNotBlank() ||
+                        it.studentName.isNotBlank()
+                }
+                .distinctBy {
+                    it.studentId.trim()
                 }
 
-            studentDao.insertStudents(
-                studentsWithSession
+            if (cleanStudents.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value = "No valid students were found."
+                }
+                return@launch
+            }
+
+            val session = Session(
+                sectionName = sectionName.trim(),
+                date = getTodayDate(),
+                totalStudents = cleanStudents.size,
+                currentIndex = 0,
+                status = "NOT_STARTED",
+                startTimeMs = null,
+                endTimeMs = null
             )
-        }
 
-        showMessage(
-            "Session created successfully."
-        )
-    }
+            val sessionId = sessionDao.insertSession(session)
 
-    /*
-     * ---------------------------------------------------------
-     * Start / Resume Session
-     * ---------------------------------------------------------
-     */
-
-    fun startOrResumeSession(
-        session: Session
-    ) {
-        viewModelScope.launch {
-
-            var updatedSession = session
-
-            if (session.status == "NOT_STARTED") {
-
-                updatedSession = session.copy(
-                    status = "IN_PROGRESS",
-                    startTimeMs = System.currentTimeMillis()
-                )
-
-                sessionDao.updateSession(
-                    updatedSession
+            val studentEntities = cleanStudents.map {
+                Student(
+                    sessionId = sessionId,
+                    studentId = it.studentId.trim(),
+                    name = it.studentName.trim()
                 )
             }
 
-            _activeSession.value = updatedSession
+            studentDao.insertStudents(studentEntities)
 
-            loadActiveSessionData(
-                updatedSession
+            val createdSession = session.copy(
+                id = sessionId
             )
+
+            withContext(Dispatchers.Main) {
+                startOrResumeSession(createdSession)
+            }
         }
     }
 
-    private suspend fun loadActiveSessionData(
-        session: Session
-    ) {
-        _activeStudents.value =
-            studentDao.getStudentsForSession(
-                session.id
-            )
+    fun startOrResumeSession(session: Session) {
+        viewModelScope.launch(Dispatchers.IO) {
 
-        _activeRecords.value =
-            attendanceDao.getRecordsForSession(
-                session.id
-            )
+            val latestSession =
+                sessionDao.getSessionById(session.id) ?: session
+
+            val students =
+                studentDao.getStudentsForSession(latestSession.id)
+
+            val records =
+                attendanceDao.getRecordsForSession(latestSession.id)
+
+            val updatedSession = when {
+                latestSession.status == "NOT_STARTED" &&
+                    students.isNotEmpty() -> {
+
+                    val startedSession = latestSession.copy(
+                        status = "IN_PROGRESS",
+                        startTimeMs = latestSession.startTimeMs
+                            ?: System.currentTimeMillis()
+                    )
+
+                    sessionDao.updateSession(startedSession)
+                    startedSession
+                }
+
+                else -> latestSession
+            }
+
+            withContext(Dispatchers.Main) {
+                _activeSession.value = updatedSession
+                _activeStudents.value = students
+                _activeRecords.value = records
+            }
+        }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Record Attendance
-     * ---------------------------------------------------------
-     */
-
     fun recordAttendance(
-        studentId: Long,
+        studentId: String,
         isPresent: Boolean
     ) {
-        val session = _activeSession.value
-            ?: return
+        val session = _activeSession.value ?: return
 
-        viewModelScope.launch {
+        if (session.currentIndex >= session.totalStudents) {
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
 
             val record = AttendanceRecord(
                 sessionId = session.id,
@@ -395,224 +315,169 @@ class MainViewModel(
                 timestamp = System.currentTimeMillis()
             )
 
-            attendanceDao.insertRecord(
-                record
+            attendanceDao.insertRecord(record)
+
+            val newIndex = session.currentIndex + 1
+            val isCompleted = newIndex >= session.totalStudents
+
+            val updatedSession = session.copy(
+                currentIndex = newIndex,
+                status = if (isCompleted) {
+                    "COMPLETED"
+                } else {
+                    "IN_PROGRESS"
+                },
+                endTimeMs = if (isCompleted) {
+                    System.currentTimeMillis()
+                } else {
+                    session.endTimeMs
+                }
             )
 
-            val newIndex =
-                session.currentIndex + 1
+            sessionDao.updateSession(updatedSession)
 
-            val isCompleted =
-                newIndex >= session.totalStudents &&
-                session.totalStudents > 0
+            val updatedRecords =
+                attendanceDao.getRecordsForSession(session.id)
 
-            val updatedSession =
-                session.copy(
-                    currentIndex = newIndex,
-                    status = if (isCompleted) {
-                        "COMPLETED"
-                    } else {
-                        "IN_PROGRESS"
-                    },
-                    endTimeMs = if (isCompleted) {
-                        System.currentTimeMillis()
-                    } else {
-                        null
-                    }
-                )
-
-            sessionDao.updateSession(
-                updatedSession
-            )
-
-            _activeSession.value =
-                updatedSession
-
-            _activeRecords.value =
-                attendanceDao.getRecordsForSession(
-                    session.id
-                )
+            withContext(Dispatchers.Main) {
+                _activeSession.value = updatedSession
+                _activeRecords.value = updatedRecords
+            }
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Undo Last Attendance
-     * ---------------------------------------------------------
-     */
-
     fun undoLastAttendance() {
-        val session = _activeSession.value
-            ?: return
+        val session = _activeSession.value ?: return
 
-        if (session.currentIndex <= 0) {
-            showMessage(
-                "There is no attendance record to undo."
-            )
-            return
-        }
-
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
 
             val records =
-                attendanceDao.getRecordsForSession(
-                    session.id
-                )
+                attendanceDao.getRecordsForSession(session.id)
 
-            val lastRecord =
-                records.lastOrNull()
+            val lastRecord = records.lastOrNull()
 
             if (lastRecord == null) {
-                showMessage(
-                    "There is no attendance record to undo."
-                )
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value = "There is no attendance record to undo."
+                }
                 return@launch
             }
 
-            attendanceDao.deleteRecord(
-                lastRecord
+            attendanceDao.deleteRecord(lastRecord)
+
+            val newIndex =
+                (session.currentIndex - 1).coerceAtLeast(0)
+
+            val updatedSession = session.copy(
+                currentIndex = newIndex,
+                status = if (newIndex == 0) {
+                    "IN_PROGRESS"
+                } else {
+                    "IN_PROGRESS"
+                },
+                endTimeMs = null
             )
 
-            val updatedSession =
-                session.copy(
-                    currentIndex =
-                        (session.currentIndex - 1)
-                            .coerceAtLeast(0),
-                    status = "IN_PROGRESS",
-                    endTimeMs = null
-                )
+            sessionDao.updateSession(updatedSession)
 
-            sessionDao.updateSession(
-                updatedSession
-            )
+            val updatedRecords =
+                attendanceDao.getRecordsForSession(session.id)
 
-            _activeSession.value =
-                updatedSession
-
-            _activeRecords.value =
-                attendanceDao.getRecordsForSession(
-                    session.id
-                )
-
-            showMessage(
-                "Last attendance record was undone."
-            )
+            withContext(Dispatchers.Main) {
+                _activeSession.value = updatedSession
+                _activeRecords.value = updatedRecords
+            }
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Excel Export
-     * ---------------------------------------------------------
-     */
+    fun closeActiveSession() {
+        _activeSession.value = null
+        _activeStudents.value = emptyList()
+        _activeRecords.value = emptyList()
+    }
+
+    fun deleteSession(
+        sessionId: Long
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+
+            val session =
+                sessionDao.getSessionById(sessionId)
+
+            if (session == null) {
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value = "Session not found."
+                }
+                return@launch
+            }
+
+            attendanceDao.deleteRecordsForSession(sessionId)
+            studentDao.deleteStudentsForSession(sessionId)
+            sessionDao.deleteSession(session)
+
+            withContext(Dispatchers.Main) {
+                if (_activeSession.value?.id == sessionId) {
+                    closeActiveSession()
+                }
+
+                _uiMessage.value = "Session deleted successfully."
+            }
+        }
+    }
 
     fun exportExcel(
         context: Context,
         session: Session
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
 
             try {
-
                 val students =
-                    studentDao.getStudentsForSession(
-                        session.id
-                    )
+                    studentDao.getStudentsForSession(session.id)
 
                 val records =
-                    attendanceDao.getRecordsForSession(
-                        session.id
-                    )
+                    attendanceDao.getRecordsForSession(session.id)
 
-                val fileUri =
-                    ExcelExporter.exportSession(
+                val file =
+                    ExcelExporter.exportSessionToExcel(
                         context = context,
                         session = session,
                         students = students,
                         records = records
                     )
 
-                ExcelExporter.shareExcelFile(
-                    context = context,
-                    fileUri = fileUri
-                )
-
-                showMessage(
-                    "Attendance Excel file is ready to share."
-                )
-
-            } catch (e: Exception) {
-
-                showMessage(
-                    e.message
-                        ?: "Unable to export attendance."
-                )
-            }
-        }
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * Delete Session
-     * ---------------------------------------------------------
-     */
-
-    fun deleteSession(
-        sessionId: Long
-    ) {
-        viewModelScope.launch {
-
-            try {
-
-                val session =
-                    sessionDao.getSessionById(
-                        sessionId
-                    )
-
-                if (session != null) {
-                    database.runInTransaction {
-
-                        attendanceDao.deleteRecordsForSession(
-                            sessionId
+                withContext(Dispatchers.Main) {
+                    if (file != null) {
+                        ExcelExporter.shareExportedFile(
+                            context = context,
+                            file = file,
+                            sectionName = session.sectionName
                         )
-
-                        studentDao.deleteStudentsForSession(
-                            sessionId
-                        )
-
-                        sessionDao.deleteSession(
-                            session
-                        )
+                    } else {
+                        _uiMessage.value =
+                            "Failed to create the Excel file."
                     }
-
-                    if (_activeSession.value?.id == sessionId) {
-                        closeActiveSession()
-                    }
-
-                    showMessage(
-                        "Session deleted successfully."
-                    )
                 }
 
             } catch (e: Exception) {
-
-                showMessage(
-                    e.message
-                        ?: "Unable to delete the session."
-                )
+                withContext(Dispatchers.Main) {
+                    _uiMessage.value =
+                        "Export failed: ${
+                            e.localizedMessage ?: "Unknown error"
+                        }"
+                }
             }
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * Close Active Session
-     * ---------------------------------------------------------
-     */
+    fun clearUiMessage() {
+        _uiMessage.value = null
+    }
 
-    fun closeActiveSession() {
-        _activeSession.value = null
-        _activeStudents.value = emptyList()
-        _activeRecords.value = emptyList()
+    private fun getTodayDate(): String {
+        return SimpleDateFormat(
+            "yyyy-MM-dd",
+            Locale.getDefault()
+        ).format(Date())
     }
 }
