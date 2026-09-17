@@ -3,10 +3,9 @@ package com.georgehany.quickattend.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ============================================================
-// QuickAttend — Professional Academic Blue Palette
+// QuickAttend Brand
 // ============================================================
 
-// ---------- Brand ----------
 val QuickAttendBlue = Color(0xFF2563EB)
 val QuickAttendBlueDark = Color(0xFF1D4ED8)
 val QuickAttendBlueLight = Color(0xFF60A5FA)
@@ -14,7 +13,10 @@ val QuickAttendBlueLight = Color(0xFF60A5FA)
 val QuickAttendNavy = Color(0xFF173B73)
 val QuickAttendNavyDark = Color(0xFF102A52)
 
-// ---------- Light Theme ----------
+// ============================================================
+// Light Theme
+// ============================================================
+
 val LightBackground = Color(0xFFF5F8FC)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceVariant = Color(0xFFF0F4F9)
@@ -28,7 +30,10 @@ val LightOnSurfaceTertiary = Color(0xFF98A2B3)
 val LightOutline = Color(0xFFD0D5DD)
 val LightOutlineVariant = Color(0xFFE4E7EC)
 
-// ---------- Dark Theme ----------
+// ============================================================
+// Dark Theme
+// ============================================================
+
 val DarkBackground = Color(0xFF0A1220)
 val DarkSurface = Color(0xFF111C2D)
 val DarkSurfaceVariant = Color(0xFF18263A)
@@ -48,13 +53,11 @@ val DarkOutlineVariant = Color(0xFF29384D)
 
 val LightPrimary = Color(0xFF1D4ED8)
 val LightOnPrimary = Color(0xFFFFFFFF)
-
 val LightPrimaryContainer = Color(0xFFDBEAFE)
 val LightOnPrimaryContainer = Color(0xFF173B73)
 
 val DarkPrimary = Color(0xFF8DB8FF)
 val DarkOnPrimary = Color(0xFF092B63)
-
 val DarkPrimaryContainer = Color(0xFF173F78)
 val DarkOnPrimaryContainer = Color(0xFFD9E8FF)
 
@@ -64,18 +67,16 @@ val DarkOnPrimaryContainer = Color(0xFFD9E8FF)
 
 val LightSecondary = Color(0xFF2563EB)
 val LightOnSecondary = Color(0xFFFFFFFF)
-
 val LightSecondaryContainer = Color(0xFFE5EEFF)
 val LightOnSecondaryContainer = Color(0xFF173B73)
 
 val DarkSecondary = Color(0xFF8FB7FF)
 val DarkOnSecondary = Color(0xFF0A2A5C)
-
 val DarkSecondaryContainer = Color(0xFF1D3E73)
 val DarkOnSecondaryContainer = Color(0xFFDCE9FF)
 
 // ============================================================
-// Status Colors
+// Success / Present
 // ============================================================
 
 val Success = Color(0xFF159A68)
@@ -87,6 +88,10 @@ val DarkSuccess = Color(0xFF55D6A0)
 val DarkSuccessContainer = Color(0xFF164B39)
 val DarkSuccessOnContainer = Color(0xFFA5F2D0)
 
+// ============================================================
+// Error / Absent
+// ============================================================
+
 val ErrorRed = Color(0xFFD64545)
 val ErrorRedDark = Color(0xFFB83232)
 val ErrorContainer = Color(0xFFFDECEC)
@@ -95,6 +100,10 @@ val ErrorOnContainer = Color(0xFFB83232)
 val DarkErrorRed = Color(0xFFFF8A82)
 val DarkErrorContainer = Color(0xFF5B2425)
 val DarkErrorOnContainer = Color(0xFFFFDAD7)
+
+// ============================================================
+// Warning
+// ============================================================
 
 val Warning = Color(0xFFD98A16)
 val WarningContainer = Color(0xFFFFF4DE)
@@ -117,7 +126,7 @@ val DarkInfoContainer = Color(0xFF1C3C70)
 val DarkInfoOnContainer = Color(0xFFD9E8FF)
 
 // ============================================================
-// Neutral / Utility
+// Basic
 // ============================================================
 
 val PureWhite = Color(0xFFFFFFFF)
@@ -125,8 +134,7 @@ val PureBlack = Color(0xFF000000)
 val Transparent = Color(0x00000000)
 
 // ============================================================
-// Backward-compatible aliases
-// These keep existing screens compiling while we redesign them.
+// Backward-Compatible Aliases
 // ============================================================
 
 val NavyPrimary = QuickAttendNavy
