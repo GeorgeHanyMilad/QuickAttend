@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.georgehany.quickattend.data.local.dao.AttendanceDao
+import com.georgehany.quickattend.data.local.dao.SessionDao
+import com.georgehany.quickattend.data.local.dao.StudentDao
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
 import com.georgehany.quickattend.data.local.entity.Student
@@ -19,6 +21,10 @@ import com.georgehany.quickattend.data.local.entity.Student
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
+
+    abstract fun sessionDao(): SessionDao
+
+    abstract fun studentDao(): StudentDao
 
     abstract fun attendanceDao(): AttendanceDao
 
