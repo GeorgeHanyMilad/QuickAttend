@@ -13,18 +13,24 @@ import kotlinx.coroutines.flow.Flow
 interface SessionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertSession(session: Session): Long
+    suspend fun insertSession(
+        session: Session
+    ): Long
 
     @Update
-    fun updateSession(session: Session)
+    suspend fun updateSession(
+        session: Session
+    )
 
     @Delete
-    fun deleteSession(session: Session)
+    suspend fun deleteSession(
+        session: Session
+    )
 
     @Query(
         """
-        SELECT *
-        FROM sessions
+        SELECT * 
+        FROM sessions 
         ORDER BY id DESC
         """
     )
@@ -32,11 +38,13 @@ interface SessionDao {
 
     @Query(
         """
-        SELECT *
-        FROM sessions
-        WHERE id = :sessionId
+        SELECT * 
+        FROM sessions 
+        WHERE id = :sessionId 
         LIMIT 1
         """
     )
-    fun getSessionById(sessionId: Long): Session?
+    suspend fun getSessionById(
+        sessionId: Long
+    ): Session?
 }
