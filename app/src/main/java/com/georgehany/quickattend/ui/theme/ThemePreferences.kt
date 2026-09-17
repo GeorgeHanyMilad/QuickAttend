@@ -13,9 +13,13 @@ object ThemePreferences {
             Context.MODE_PRIVATE
         )
 
-        return when (preferences.getString(KEY_THEME_MODE, ThemeMode.LIGHT.name)) {
+        return when (
+            preferences.getString(
+                KEY_THEME_MODE,
+                ThemeMode.LIGHT.name
+            )
+        ) {
             ThemeMode.DARK.name -> ThemeMode.DARK
-            ThemeMode.SYSTEM.name -> ThemeMode.SYSTEM
             else -> ThemeMode.LIGHT
         }
     }
@@ -24,12 +28,16 @@ object ThemePreferences {
         context: Context,
         themeMode: ThemeMode
     ) {
-        context.getSharedPreferences(
-            PREFS_NAME,
-            Context.MODE_PRIVATE
-        )
+        context
+            .getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
             .edit()
-            .putString(KEY_THEME_MODE, themeMode.name)
+            .putString(
+                KEY_THEME_MODE,
+                themeMode.name
+            )
             .apply()
     }
 }
