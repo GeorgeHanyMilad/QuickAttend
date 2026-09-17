@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,23 +12,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,11 +42,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,10 +53,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.georgehany.quickattend.data.local.entity.Session
+import com.georgehany.quickattend.ui.theme.DarkSuccess
+import com.georgehany.quickattend.ui.theme.ErrorRed
+import com.georgehany.quickattend.ui.theme.Success
 import com.georgehany.quickattend.ui.theme.ThemeMode
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -66,26 +73,19 @@ fun HomeScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    val completedToday = todaySessions.count {
-        it.status == "COMPLETED"
+    var selectedTab by remember {
+        mutableIntStateOf(0)
     }
 
-    val activeToday = todaySessions.count {
-        it.status != "COMPLETED"
+    var sessionToDelete by remember {
+        mutableStateOf<Session?>(null)
     }
 
-    val studentsToday = todaySessions.sumOf {
-        it.totalStudents
+    val displayedSessions = if (selectedTab == 0) {
+        todaySessions
+    } else {
+        historySessions
     }
-
-    val sessionsToShow =
-        if (selectedTab == 0) {
-            todaySessions
-        } else {
-            historySessions
-        }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -95,18 +95,14 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 18.dp,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 20.dp,
                 bottom = 32.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // ====================================================
-            // HEADER
-            // ====================================================
 
             item {
                 HomeHeader(
@@ -115,81 +111,35 @@ fun HomeScreen(
                 )
             }
 
-            // ====================================================
-            // OVERVIEW
-            // ====================================================
-
             item {
                 OverviewCard(
-                    sessions = todaySessions.size,
-                    completed = completedToday,
-                    active = activeToday,
-                    students = studentsToday
+                    todaySessions = todaySessions,
+                    historySessions = historySessions
                 )
             }
 
-            // ====================================================
-            // CREATE SESSION
-            // ====================================================
-
             item {
-                CreateSessionCard(
+                StartAttendanceCard(
                     onClick = onStartOrCreateSessionClick
                 )
             }
 
-            // ====================================================
-            // SESSION SECTION
-            // ====================================================
-
-            item {
-                Column {
-
-                    Text(
-                        text = "Attendance Sessions",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
-
-                    Text(
-                        text = if (selectedTab == 0) {
-                            "Today's attendance activity"
-                        } else {
-                            "Previously recorded sessions"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // ====================================================
-            // TABS
-            // ====================================================
-
             item {
                 SessionTabs(
                     selectedTab = selectedTab,
+                    todayCount = todaySessions.size,
+                    historyCount = historySessions.size,
                     onTabSelected = {
                         selectedTab = it
                     }
                 )
             }
 
-            // ====================================================
-            // SESSIONS
-            // ====================================================
-
-            if (sessionsToShow.isEmpty()) {
+            if (displayedSessions.isEmpty()) {
 
                 item {
-                    EmptySessionsCard(
-                        isHistory = selectedTab == 1,
+                    EmptySessionsState(
+                        isToday = selectedTab == 0,
                         onCreateSession = onStartOrCreateSessionClick
                     )
                 }
@@ -197,7 +147,7 @@ fun HomeScreen(
             } else {
 
                 items(
-                    items = sessionsToShow,
+                    items = displayedSessions,
                     key = { it.id }
                 ) { session ->
 
@@ -207,18 +157,28 @@ fun HomeScreen(
                             onSessionSelect(session)
                         },
                         onDelete = {
-                            onDeleteSession(session.id)
+                            sessionToDelete = session
                         }
                     )
                 }
             }
         }
     }
-}
 
-// ================================================================
-// HEADER
-// ================================================================
+    sessionToDelete?.let { session ->
+
+        DeleteSessionDialog(
+            session = session,
+            onDismiss = {
+                sessionToDelete = null
+            },
+            onConfirm = {
+                onDeleteSession(session.id)
+                sessionToDelete = null
+            }
+        )
+    }
+}
 
 @Composable
 private fun HomeHeader(
@@ -227,6 +187,7 @@ private fun HomeHeader(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
     ) {
 
@@ -236,20 +197,19 @@ private fun HomeHeader(
 
             Text(
                 text = "EELU - Student Attendance",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(
-                modifier = Modifier.height(5.dp)
+                modifier = Modifier.height(4.dp)
             )
 
             Text(
                 text = "Hello, Eng. George Hany",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -260,93 +220,105 @@ private fun HomeHeader(
     }
 }
 
-// ================================================================
-// THEME TOGGLE
-// ================================================================
-
 @Composable
 private fun ThemeToggle(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
     Surface(
-        modifier = Modifier.size(44.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 0.dp
     ) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-        IconButton(
-            onClick = {
-                onThemeModeChange(
-                    if (themeMode == ThemeMode.LIGHT) {
-                        ThemeMode.DARK
+            IconButton(
+                onClick = {
+                    onThemeModeChange(ThemeMode.LIGHT)
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LightMode,
+                    contentDescription = "Light mode",
+                    tint = if (themeMode == ThemeMode.LIGHT) {
+                        MaterialTheme.colorScheme.primary
                     } else {
-                        ThemeMode.LIGHT
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
             }
-        ) {
 
-            Icon(
-                imageVector = if (themeMode == ThemeMode.LIGHT) {
-                    Icons.Default.NightsStay
-                } else {
-                    Icons.Default.LightMode
+            IconButton(
+                onClick = {
+                    onThemeModeChange(ThemeMode.DARK)
                 },
-                contentDescription = if (themeMode == ThemeMode.LIGHT) {
-                    "Switch to dark mode"
-                } else {
-                    "Switch to light mode"
-                },
-                tint = MaterialTheme.colorScheme.primary
-            )
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DarkMode,
+                    contentDescription = "Dark mode",
+                    tint = if (themeMode == ThemeMode.DARK) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
         }
     }
 }
 
-// ================================================================
-// OVERVIEW
-// ================================================================
-
 @Composable
 private fun OverviewCard(
-    sessions: Int,
-    completed: Int,
-    active: Int,
-    students: Int
+    todaySessions: List<Session>,
+    historySessions: List<Session>
 ) {
+    val allSessions = todaySessions + historySessions
+
+    val completedCount = allSessions.count {
+        it.status == "COMPLETED"
+    }
+
+    val activeCount = allSessions.count {
+        it.status == "IN_PROGRESS"
+    }
+
+    val totalStudents = allSessions.sumOf {
+        it.totalStudents
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
+            defaultElevation = 0.dp
         )
     ) {
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column {
 
                     Text(
                         text = "Overview",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
 
                     Spacer(
@@ -354,145 +326,117 @@ private fun OverviewCard(
                     )
 
                     Text(
-                        text = "Today's attendance activity",
+                        text = "Attendance activity at a glance",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onPrimary.copy(
+                            alpha = 0.78f
+                        )
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Icon(
-                        imageVector = Icons.Default.Today,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.TaskAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(28.dp)
+                )
             }
 
             Spacer(
-                modifier = Modifier.height(16.dp)
+                modifier = Modifier.height(20.dp)
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
 
                 OverviewMetric(
                     modifier = Modifier.weight(1f),
-                    value = sessions.toString(),
-                    label = "Sessions",
-                    icon = Icons.Default.Schedule
+                    value = allSessions.size.toString(),
+                    label = "Sessions"
                 )
 
                 OverviewMetric(
                     modifier = Modifier.weight(1f),
-                    value = completed.toString(),
-                    label = "Completed",
-                    icon = Icons.Default.Check
+                    value = completedCount.toString(),
+                    label = "Completed"
                 )
 
                 OverviewMetric(
                     modifier = Modifier.weight(1f),
-                    value = active.toString(),
-                    label = "Active",
-                    icon = Icons.Default.PlayArrow
+                    value = activeCount.toString(),
+                    label = "Active"
                 )
 
                 OverviewMetric(
                     modifier = Modifier.weight(1f),
-                    value = students.toString(),
-                    label = "Students",
-                    icon = Icons.Default.Groups
+                    value = totalStudents.toString(),
+                    label = "Students"
                 )
             }
         }
     }
 }
-
-// ================================================================
-// OVERVIEW METRIC
-// ================================================================
 
 @Composable
 private fun OverviewMetric(
     modifier: Modifier,
     value: String,
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    label: String
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(15.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.12f)
     ) {
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = 5.dp,
-                    vertical = 11.dp
-                ),
+            modifier = Modifier.padding(
+                horizontal = 8.dp,
+                vertical = 12.dp
+            ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
             )
 
             Spacer(
-                modifier = Modifier.height(5.dp)
-            )
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
+                modifier = Modifier.height(2.dp)
             )
 
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                color = MaterialTheme.colorScheme.onPrimary.copy(
+                    alpha = 0.72f
+                )
             )
         }
     }
 }
 
-// ================================================================
-// CREATE SESSION CARD
-// ================================================================
-
 @Composable
-private fun CreateSessionCard(
+private fun StartAttendanceCard(
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+            .clickable {
+                onClick()
+            },
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
+            defaultElevation = 1.dp
         )
     ) {
 
@@ -508,9 +452,7 @@ private fun CreateSessionCard(
                     .size(50.dp)
                     .clip(RoundedCornerShape(15.dp))
                     .background(
-                        MaterialTheme.colorScheme.onPrimary.copy(
-                            alpha = 0.14f
-                        )
+                        MaterialTheme.colorScheme.primaryContainer
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -518,13 +460,13 @@ private fun CreateSessionCard(
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(27.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(25.dp)
                 )
             }
 
             Spacer(
-                modifier = Modifier.width(14.dp)
+                modifier = Modifier.size(14.dp)
             )
 
             Column(
@@ -534,8 +476,8 @@ private fun CreateSessionCard(
                 Text(
                     text = "Start New Attendance",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(
@@ -543,78 +485,61 @@ private fun CreateSessionCard(
                 )
 
                 Text(
-                    text = "Import your student list and begin recording attendance.",
+                    text = "Import your student list and begin",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(
-                        alpha = 0.82f
-                    )
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Icon(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
 }
-
-// ================================================================
-// TABS
-// ================================================================
 
 @Composable
 private fun SessionTabs(
     selectedTab: Int,
+    todayCount: Int,
+    historyCount: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+    TabRow(
+        selectedTabIndex = selectedTab,
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.primary
     ) {
 
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.primary,
-            divider = {}
-        ) {
+        Tab(
+            selected = selectedTab == 0,
+            onClick = {
+                onTabSelected(0)
+            },
+            text = {
+                Text(
+                    text = "Today ($todayCount)",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        )
 
-            Tab(
-                selected = selectedTab == 0,
-                onClick = {
-                    onTabSelected(0)
-                },
-                text = {
-                    Text(
-                        text = "Today",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            )
-
-            Tab(
-                selected = selectedTab == 1,
-                onClick = {
-                    onTabSelected(1)
-                },
-                text = {
-                    Text(
-                        text = "History",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            )
-        }
+        Tab(
+            selected = selectedTab == 1,
+            onClick = {
+                onTabSelected(1)
+            },
+            text = {
+                Text(
+                    text = "History ($historyCount)",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        )
     }
 }
-
-// ================================================================
-// SESSION CARD
-// ================================================================
 
 @Composable
 private fun SessionCard(
@@ -623,76 +548,81 @@ private fun SessionCard(
     onDelete: () -> Unit
 ) {
     val isCompleted = session.status == "COMPLETED"
+    val isActive = session.status == "IN_PROGRESS"
 
-    val completedStudents =
-        session.currentIndex.coerceIn(
-            0,
-            session.totalStudents
-        )
+    val progress = if (session.totalStudents > 0) {
+        (
+            session.currentIndex.toFloat() /
+                session.totalStudents.toFloat()
+            ).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
 
-    val progress =
-        if (session.totalStudents > 0) {
-            completedStudents.toFloat() /
-                    session.totalStudents.toFloat()
-        } else {
-            0f
-        }
+    val statusText = when {
+        isCompleted -> "Completed"
+        isActive -> "In Progress"
+        else -> "Not Started"
+    }
+
+    val statusColor = when {
+        isCompleted -> Success
+        isActive -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
+            defaultElevation = 1.dp
         )
     ) {
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.padding(18.dp)
         ) {
 
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
 
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(13.dp))
+                        .size(46.dp)
+                        .clip(CircleShape)
                         .background(
-                            if (isCompleted) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.secondaryContainer
-                            }
+                            MaterialTheme.colorScheme.primaryContainer
                         ),
                     contentAlignment = Alignment.Center
                 ) {
 
                     Icon(
                         imageVector = if (isCompleted) {
-                            Icons.Default.Check
+                            Icons.Default.CheckCircle
                         } else {
-                            Icons.Default.Schedule
+                            Icons.Default.Groups
                         },
                         contentDescription = null,
                         tint = if (isCompleted) {
-                            MaterialTheme.colorScheme.primary
+                            Success
                         } else {
-                            MaterialTheme.colorScheme.secondary
+                            MaterialTheme.colorScheme.primary
                         },
-                        modifier = Modifier.size(21.dp)
+                        modifier = Modifier.size(23.dp)
                     )
                 }
 
                 Spacer(
-                    modifier = Modifier.width(12.dp)
+                    modifier = Modifier.size(12.dp)
                 )
 
                 Column(
@@ -702,29 +632,40 @@ private fun SessionCard(
                     Text(
                         text = session.sectionName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(
-                        modifier = Modifier.height(2.dp)
+                        modifier = Modifier.height(4.dp)
                     )
 
-                    Text(
-                        text = "${session.date} • ${session.totalStudents} students",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(
+                            modifier = Modifier.size(5.dp)
+                        )
+
+                        Text(
+                            text = formatSessionDate(session.date),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 IconButton(
                     onClick = onDelete
                 ) {
-
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
                         contentDescription = "Delete session",
@@ -734,63 +675,28 @@ private fun SessionCard(
             }
 
             Spacer(
-                modifier = Modifier.height(14.dp)
+                modifier = Modifier.height(16.dp)
             )
 
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
 
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isCompleted) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    }
-                ) {
-
-                    Text(
-                        text = if (isCompleted) {
-                            "Completed"
-                        } else {
-                            "In Progress"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isCompleted) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        },
-                        modifier = Modifier.padding(
-                            horizontal = 9.dp,
-                            vertical = 5.dp
-                        )
-                    )
-                }
-
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
-
                 Text(
-                    text = if (isCompleted) {
-                        "${session.totalStudents} / ${session.totalStudents}"
-                    } else {
-                        "$completedStudents / ${session.totalStudents}"
-                    },
+                    text = "${
+                        session.currentIndex
+                    } / ${
+                        session.totalStudents
+                    } students",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(
-                    modifier = Modifier.weight(1f)
-                )
-
                 Text(
-                    text = "${(progress * 100).toInt()}%",
+                    text = statusText,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = statusColor,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -800,46 +706,45 @@ private fun SessionCard(
             )
 
             androidx.compose.material3.LinearProgressIndicator(
-                progress = {
-                    progress.coerceIn(0f, 1f)
-                },
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(7.dp)
                     .clip(RoundedCornerShape(10.dp)),
-                color = MaterialTheme.colorScheme.primary,
+                color = if (isCompleted) {
+                    Success
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }
 }
 
-// ================================================================
-// EMPTY STATE
-// ================================================================
-
 @Composable
-private fun EmptySessionsCard(
-    isHistory: Boolean,
+private fun EmptySessionsState(
+    isToday: Boolean,
     onCreateSession: () -> Unit
 ) {
-    Surface(
+    Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(30.dp),
+                .padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Box(
                 modifier = Modifier
-                    .size(58.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
                     .background(
                         MaterialTheme.colorScheme.primaryContainer
@@ -848,73 +753,149 @@ private fun EmptySessionsCard(
             ) {
 
                 Icon(
-                    imageVector = if (isHistory) {
+                    imageVector = if (isToday) {
                         Icons.Default.Schedule
                     } else {
-                        Icons.Default.Today
+                        Icons.Default.CalendarToday
                     },
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(27.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
 
             Spacer(
-                modifier = Modifier.height(13.dp)
+                modifier = Modifier.height(16.dp)
             )
 
             Text(
-                text = if (isHistory) {
-                    "No Previous Sessions"
+                text = if (isToday) {
+                    "No attendance sessions today"
                 } else {
-                    "No Sessions Today"
+                    "No attendance history"
                 },
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(
-                modifier = Modifier.height(5.dp)
+                modifier = Modifier.height(6.dp)
             )
 
             Text(
-                text = if (isHistory) {
-                    "Completed attendance sessions will appear here."
+                text = if (isToday) {
+                    "Create a session to start recording student attendance."
                 } else {
-                    "Create an attendance session to get started."
+                    "Completed and previous sessions will appear here."
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (!isHistory) {
+            if (isToday) {
 
                 Spacer(
-                    modifier = Modifier.height(16.dp)
+                    modifier = Modifier.height(18.dp)
                 )
 
-                OutlinedButton(
+                Button(
                     onClick = onCreateSession,
                     shape = RoundedCornerShape(12.dp)
                 ) {
-
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = null
                     )
 
                     Spacer(
-                        modifier = Modifier.width(7.dp)
+                        modifier = Modifier.size(8.dp)
                     )
 
                     Text(
-                        text = "Create Session",
-                        fontWeight = FontWeight.SemiBold
+                        text = "Create Session"
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DeleteSessionDialog(
+    session: Session,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+
+        icon = {
+            Icon(
+                imageVector = Icons.Default.DeleteOutline,
+                contentDescription = null,
+                tint = ErrorRed
+            )
+        },
+
+        title = {
+            Text(
+                text = "Delete Session?"
+            )
+        },
+
+        text = {
+            Text(
+                text = "This will permanently delete the attendance session for \"${session.sectionName}\" and all its records."
+            )
+        },
+
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ErrorRed
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = "Delete"
+                )
+            }
+        },
+
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = "Cancel"
+                )
+            }
+        }
+    )
+}
+
+private fun formatSessionDate(
+    date: String
+): String {
+    return try {
+        val input = SimpleDateFormat(
+            "yyyy-MM-dd",
+            Locale.getDefault()
+        )
+
+        val output = SimpleDateFormat(
+            "EEE, dd MMM yyyy",
+            Locale.getDefault()
+        )
+
+        input.parse(date)?.let {
+            output.format(it)
+        } ?: date
+
+    } catch (_: Exception) {
+        date
     }
 }
