@@ -1,3 +1,4 @@
-# Add project specific ProGuard rules here.
--keep class org.apache.poi.** { *; }
--dontwarn org.apache.poi.**
+# QuickAttend ProGuard / R8 Rules
+
+# No custom rules are currently required.
+# Keep this file for future release optimization and shrinking rules.
