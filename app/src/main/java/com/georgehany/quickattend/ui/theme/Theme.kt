@@ -8,13 +8,11 @@ import androidx.compose.runtime.Composable
 private val QuickAttendLightColorScheme = lightColorScheme(
     primary = LightPrimary,
     onPrimary = LightOnPrimary,
-
     primaryContainer = LightPrimaryContainer,
     onPrimaryContainer = LightOnPrimaryContainer,
 
     secondary = LightSecondary,
     onSecondary = LightOnSecondary,
-
     secondaryContainer = LightSecondaryContainer,
     onSecondaryContainer = LightOnSecondaryContainer,
 
@@ -32,13 +30,12 @@ private val QuickAttendLightColorScheme = lightColorScheme(
 
     error = ErrorRed,
     onError = PureWhite,
-
     errorContainer = ErrorContainer,
     onErrorContainer = ErrorOnContainer,
 
     inverseSurface = LightOnSurface,
     inverseOnSurface = PureWhite,
-    inversePrimary = LightPrimaryContainer,
+    inversePrimary = LightPrimary,
 
     scrim = PureBlack
 )
@@ -46,13 +43,11 @@ private val QuickAttendLightColorScheme = lightColorScheme(
 private val QuickAttendDarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
-
     primaryContainer = DarkPrimaryContainer,
     onPrimaryContainer = DarkOnPrimaryContainer,
 
     secondary = DarkSecondary,
     onSecondary = DarkOnSecondary,
-
     secondaryContainer = DarkSecondaryContainer,
     onSecondaryContainer = DarkOnSecondaryContainer,
 
@@ -70,7 +65,6 @@ private val QuickAttendDarkColorScheme = darkColorScheme(
 
     error = DarkErrorRed,
     onError = DarkErrorContainer,
-
     errorContainer = DarkErrorContainer,
     onErrorContainer = DarkErrorOnContainer,
 
