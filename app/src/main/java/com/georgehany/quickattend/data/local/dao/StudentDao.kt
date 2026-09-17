@@ -11,20 +11,27 @@ import com.georgehany.quickattend.data.local.entity.Student
 interface StudentDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertStudents(students: List<Student>)
+    suspend fun insertStudents(
+        students: List<Student>
+    )
 
     @Query(
-        "SELECT * FROM students " +
-            "WHERE sessionId = :sessionId " +
-            "ORDER BY id ASC"
+        """
+        SELECT *
+        FROM students
+        WHERE sessionId = :sessionId
+        ORDER BY id ASC
+        """
     )
     suspend fun getStudentsForSession(
         sessionId: Long
     ): List<Student>
 
     @Query(
-        "DELETE FROM students " +
-            "WHERE sessionId = :sessionId"
+        """
+        DELETE FROM students
+        WHERE sessionId = :sessionId
+        """
     )
     suspend fun deleteStudentsForSession(
         sessionId: Long
