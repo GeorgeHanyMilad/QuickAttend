@@ -3,7 +3,6 @@ package com.georgehany.quickattend.data.local.entity
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "students",
@@ -20,7 +19,7 @@ import androidx.room.PrimaryKey
     ]
 )
 data class Student(
-    @PrimaryKey(autoGenerate = true)
+    @androidx.room.PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
     val sessionId: Long,
