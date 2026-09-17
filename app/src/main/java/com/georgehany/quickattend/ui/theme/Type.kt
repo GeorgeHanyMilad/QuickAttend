@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.sp
 
 val Typography = Typography(
 
-    // Large display
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -33,7 +32,6 @@ val Typography = Typography(
         letterSpacing = (-0.3).sp
     ),
 
-    // Headings
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -57,7 +55,6 @@ val Typography = Typography(
         lineHeight = 26.sp
     ),
 
-    // Titles
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -79,7 +76,6 @@ val Typography = Typography(
         lineHeight = 20.sp
     ),
 
-    // Body
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -101,7 +97,6 @@ val Typography = Typography(
         lineHeight = 18.sp
     ),
 
-    // Labels
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
