@@ -6,9 +6,13 @@ import androidx.core.content.FileProvider
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
 import com.georgehany.quickattend.data.local.entity.Student
+import org.apache.poi.ss.usermodel.BorderStyle
+import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.FillPatternType
+import org.apache.poi.ss.usermodel.Font
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileOutputStream
@@ -25,343 +29,469 @@ object ExcelExporter {
         records: List<AttendanceRecord>
     ): File? {
 
-        var workbook: XSSFWorkbook? = null
-
         return try {
 
-            workbook = XSSFWorkbook()
+            val workbook = XSSFWorkbook()
 
-            val sheet = workbook.createSheet("Attendance Summary")
+            val sheet = workbook.createSheet(
+                "Attendance"
+            )
 
-            // ==============================
-            // STYLES
-            // ==============================
-
-            val headerStyle = workbook.createCellStyle().apply {
-
-                val font = workbook.createFont().apply {
+            val headerFont =
+                workbook.createFont().apply {
                     bold = true
                     color = IndexedColors.WHITE.index
                 }
 
-                setFont(font)
+            val titleFont =
+                workbook.createFont().apply {
+                    bold = true
+                    fontHeightInPoints = 16
+                    color = IndexedColors.WHITE.index
+                }
 
-                fillForegroundColor =
-                    IndexedColors.DARK_BLUE.index
+            val subtitleFont =
+                workbook.createFont().apply {
+                    bold = true
+                    fontHeightInPoints = 11
+                    color = IndexedColors.DARK_BLUE.index
+                }
 
-                fillPattern =
-                    FillPatternType.SOLID_FOREGROUND
+            val normalFont =
+                workbook.createFont().apply {
+                    fontHeightInPoints = 10
+                }
 
-                alignment =
-                    HorizontalAlignment.CENTER
+            val headerStyle =
+                workbook.createCellStyle().apply {
+                    setFont(headerFont)
+                    fillForegroundColor =
+                        IndexedColors.DARK_BLUE.index
+                    fillPattern =
+                        FillPatternType.SOLID_FOREGROUND
+                    alignment =
+                        HorizontalAlignment.CENTER
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+
+                    borderTop =
+                        BorderStyle.THIN
+                    borderBottom =
+                        BorderStyle.THIN
+                    borderLeft =
+                        BorderStyle.THIN
+                    borderRight =
+                        BorderStyle.THIN
+                }
+
+            val titleStyle =
+                workbook.createCellStyle().apply {
+                    setFont(titleFont)
+                    fillForegroundColor =
+                        IndexedColors.BLUE.index
+                    fillPattern =
+                        FillPatternType.SOLID_FOREGROUND
+                    alignment =
+                        HorizontalAlignment.CENTER
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                }
+
+            val subtitleStyle =
+                workbook.createCellStyle().apply {
+                    setFont(subtitleFont)
+                    alignment =
+                        HorizontalAlignment.LEFT
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                }
+
+            val normalStyle =
+                workbook.createCellStyle().apply {
+                    setFont(normalFont)
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                    borderBottom =
+                        BorderStyle.THIN
+                    borderLeft =
+                        BorderStyle.THIN
+                    borderRight =
+                        BorderStyle.THIN
+                }
+
+            val centerStyle =
+                workbook.createCellStyle().apply {
+                    setFont(normalFont)
+                    alignment =
+                        HorizontalAlignment.CENTER
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                    borderBottom =
+                        BorderStyle.THIN
+                    borderLeft =
+                        BorderStyle.THIN
+                    borderRight =
+                        BorderStyle.THIN
+                }
+
+            val presentStyle =
+                workbook.createCellStyle().apply {
+                    setFont(normalFont)
+                    alignment =
+                        HorizontalAlignment.CENTER
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                    fillForegroundColor =
+                        IndexedColors.LIGHT_GREEN.index
+                    fillPattern =
+                        FillPatternType.SOLID_FOREGROUND
+                    borderBottom =
+                        BorderStyle.THIN
+                    borderLeft =
+                        BorderStyle.THIN
+                    borderRight =
+                        BorderStyle.THIN
+                }
+
+            val absentStyle =
+                workbook.createCellStyle().apply {
+                    setFont(normalFont)
+                    alignment =
+                        HorizontalAlignment.CENTER
+                    verticalAlignment =
+                        VerticalAlignment.CENTER
+                    fillForegroundColor =
+                        IndexedColors.ROSE.index
+                    fillPattern =
+                        FillPatternType.SOLID_FOREGROUND
+                    borderBottom =
+                        BorderStyle.THIN
+                    borderLeft =
+                        BorderStyle.THIN
+                    borderRight =
+                        BorderStyle.THIN
+                }
+
+            /*
+             * Title
+             */
+            val titleRow =
+                sheet.createRow(0)
+
+            titleRow.heightInPoints = 28f
+
+            val titleCell =
+                titleRow.createCell(0)
+
+            titleCell.setCellValue(
+                "EELU - Student Attendance"
+            )
+
+            titleCell.cellStyle =
+                titleStyle
+
+            sheet.addMergedRegion(
+                org.apache.poi.ss.util.CellRangeAddress(
+                    0,
+                    0,
+                    0,
+                    4
+                )
+            )
+
+            /*
+             * Session information
+             */
+            val sectionRow =
+                sheet.createRow(2)
+
+            sectionRow.createCell(0).apply {
+                setCellValue("Section")
+                cellStyle = subtitleStyle
             }
 
-            val summaryTitleStyle =
-                workbook.createCellStyle().apply {
+            sectionRow.createCell(1).apply {
+                setCellValue(session.sectionName)
+                cellStyle = normalStyle
+            }
 
-                    val font = workbook.createFont().apply {
-                        bold = true
-                        color = IndexedColors.DARK_BLUE.index
-                    }
+            val dateRow =
+                sheet.createRow(3)
 
-                    setFont(font)
-                }
+            dateRow.createCell(0).apply {
+                setCellValue("Date")
+                cellStyle = subtitleStyle
+            }
 
-            // ==============================
-            // ATTENDANCE DATA
-            // ==============================
+            dateRow.createCell(1).apply {
+                setCellValue(session.date)
+                cellStyle = normalStyle
+            }
 
-            val recordsMap =
-                records.associateBy { it.studentId }
+            val statusRow =
+                sheet.createRow(4)
 
-            val presentCount =
-                students.count { student ->
-                    recordsMap[student.studentId]?.isPresent == true
-                }
+            statusRow.createCell(0).apply {
+                setCellValue("Status")
+                cellStyle = subtitleStyle
+            }
 
-            val notPresentCount =
-                students.size - presentCount
+            statusRow.createCell(1).apply {
+                setCellValue(session.status)
+                cellStyle = normalStyle
+            }
 
+            /*
+             * Summary
+             */
             val totalStudents =
                 students.size
+
+            val presentCount =
+                records.count { it.isPresent }
+
+            val absentCount =
+                records.count { !it.isPresent }
 
             val attendanceRate =
                 if (totalStudents > 0) {
                     (presentCount.toDouble() /
-                            totalStudents.toDouble()) * 100.0
+                        totalStudents.toDouble()) * 100.0
                 } else {
                     0.0
                 }
 
-            // ==============================
-            // TIME FORMAT
-            // ==============================
+            val summaryRow =
+                sheet.createRow(6)
 
-            val timeFormatter =
-                SimpleDateFormat(
-                    "hh:mm a",
-                    Locale.ENGLISH
-                )
-
-            val startTimeStr =
-                session.startTimeMs?.let {
-                    timeFormatter.format(Date(it))
-                } ?: "N/A"
-
-            val endTimeStr =
-                session.endTimeMs?.let {
-                    timeFormatter.format(Date(it))
-                } ?: "N/A"
-
-            var rowNum = 0
-
-            // ==============================
-            // TITLE
-            // ==============================
-
-            val titleRow =
-                sheet.createRow(rowNum++)
-
-            titleRow.createCell(0).apply {
-
-                setCellValue(
-                    "Attendance Report - ${session.sectionName}"
-                )
-
-                cellStyle =
-                    summaryTitleStyle
+            summaryRow.createCell(0).apply {
+                setCellValue("Total Students")
+                cellStyle = subtitleStyle
             }
 
-            rowNum++
+            summaryRow.createCell(1).apply {
+                setCellValue(totalStudents.toDouble())
+                cellStyle = centerStyle
+            }
 
-            // ==============================
-            // SUMMARY
-            // ==============================
+            summaryRow.createCell(2).apply {
+                setCellValue("Present")
+                cellStyle = subtitleStyle
+            }
 
-            val summaryItems =
-                listOf(
-                    "Section Name:" to session.sectionName,
-                    "Date:" to session.date,
-                    "Start Time:" to startTimeStr,
-                    "End Time:" to endTimeStr,
-                    "Total Students:" to totalStudents.toString(),
-                    "Present:" to presentCount.toString(),
-                    "Absent:" to notPresentCount.toString(),
-                    "Attendance Rate:" to
-                            String.format(
-                                Locale.ENGLISH,
-                                "%.1f%%",
-                                attendanceRate
-                            )
+            summaryRow.createCell(3).apply {
+                setCellValue(presentCount.toDouble())
+                cellStyle = centerStyle
+            }
+
+            summaryRow.createCell(4).apply {
+                setCellValue(
+                    String.format(
+                        Locale.US,
+                        "%.1f%%",
+                        attendanceRate
+                    )
                 )
+                cellStyle = centerStyle
+            }
 
-            for ((key, value) in summaryItems) {
+            val absentSummaryRow =
+                sheet.createRow(7)
 
-                val row =
-                    sheet.createRow(rowNum++)
+            absentSummaryRow.createCell(0).apply {
+                setCellValue("Absent")
+                cellStyle = subtitleStyle
+            }
 
-                row.createCell(0).apply {
+            absentSummaryRow.createCell(1).apply {
+                setCellValue(absentCount.toDouble())
+                cellStyle = centerStyle
+            }
 
-                    setCellValue(key)
+            /*
+             * Attendance table
+             */
+            val tableHeaderRow =
+                sheet.createRow(9)
 
-                    cellStyle =
-                        summaryTitleStyle
+            val headers = listOf(
+                "#",
+                "Student ID",
+                "Student Name",
+                "Attendance",
+                "Recorded At"
+            )
+
+            headers.forEachIndexed { index, header ->
+                tableHeaderRow
+                    .createCell(index)
+                    .apply {
+                        setCellValue(header)
+                        cellStyle = headerStyle
+                    }
+            }
+
+            val recordsByStudent =
+                records.associateBy {
+                    it.studentId
                 }
 
-                row.createCell(1)
-                    .setCellValue(value)
-            }
-
-            rowNum++
-
-            // ==============================
-            // ATTENDANCE TABLE TITLE
-            // ==============================
-
-            val tableTitleRow =
-                sheet.createRow(rowNum++)
-
-            tableTitleRow.createCell(0).apply {
-
-                setCellValue(
-                    "Attendance List"
-                )
-
-                cellStyle =
-                    summaryTitleStyle
-            }
-
-            // ==============================
-            // TABLE HEADERS
-            // ==============================
-
-            val headers =
-                listOf(
-                    "Student ID",
-                    "Student Name",
-                    "Status",
-                    "Date",
-                    "Time",
-                    "Section"
-                )
-
-            val headerRow =
-                sheet.createRow(rowNum++)
-
-            for (i in headers.indices) {
-
-                val cell =
-                    headerRow.createCell(i)
-
-                cell.setCellValue(headers[i])
-
-                cell.cellStyle =
-                    headerStyle
-            }
-
-            // ==============================
-            // ALL STUDENTS
-            // ==============================
-
-            for (student in students) {
-
-                val record =
-                    recordsMap[student.studentId]
-
-                val isPresent =
-                    record?.isPresent == true
-
-                val status =
-                    if (isPresent) {
-                        "Present"
-                    } else {
-                        "Absent"
-                    }
-
-                val recordTime =
-                    record?.timestamp?.let {
-                        timeFormatter.format(
-                            Date(it)
-                        )
-                    } ?: "-"
+            students.forEachIndexed { index, student ->
 
                 val row =
-                    sheet.createRow(rowNum++)
+                    sheet.createRow(
+                        10 + index
+                    )
 
-                row.createCell(0)
-                    .setCellValue(
+                val record =
+                    recordsByStudent[student.studentId]
+
+                row.createCell(0).apply {
+                    setCellValue(
+                        (index + 1).toDouble()
+                    )
+                    cellStyle = centerStyle
+                }
+
+                row.createCell(1).apply {
+                    setCellValue(
                         student.studentId
                     )
+                    cellStyle = normalStyle
+                }
 
-                row.createCell(1)
-                    .setCellValue(
-                        student.studentName
+                row.createCell(2).apply {
+                    setCellValue(
+                        student.name
+                    )
+                    cellStyle = normalStyle
+                }
+
+                row.createCell(3).apply {
+
+                    setCellValue(
+                        when {
+                            record == null -> "Not Recorded"
+                            record.isPresent -> "Present"
+                            else -> "Absent"
+                        }
                     )
 
-                row.createCell(2)
-                    .setCellValue(
-                        status
-                    )
+                    cellStyle = when {
+                        record == null ->
+                            centerStyle
 
-                row.createCell(3)
-                    .setCellValue(
-                        session.date
-                    )
+                        record.isPresent ->
+                            presentStyle
 
-                row.createCell(4)
-                    .setCellValue(
-                        recordTime
-                    )
+                        else ->
+                            absentStyle
+                    }
+                }
 
-                row.createCell(5)
-                    .setCellValue(
-                        session.sectionName
-                    )
+                row.createCell(4).apply {
+
+                    val timestamp =
+                        record?.timestamp
+
+                    if (timestamp != null) {
+
+                        val formatted =
+                            SimpleDateFormat(
+                                "HH:mm:ss",
+                                Locale.getDefault()
+                            ).format(
+                                Date(timestamp)
+                            )
+
+                        setCellValue(formatted)
+
+                    } else {
+                        setCellValue("-")
+                    }
+
+                    cellStyle = centerStyle
+                }
             }
 
-            // ==============================
-            // COLUMN WIDTHS
-            // ==============================
+            /*
+             * Column widths
+             */
+            sheet.setColumnWidth(
+                0,
+                8 * 256
+            )
 
-            for (i in headers.indices) {
+            sheet.setColumnWidth(
+                1,
+                20 * 256
+            )
 
-                sheet.setColumnWidth(
-                    i,
-                    5000
-                )
-            }
+            sheet.setColumnWidth(
+                2,
+                38 * 256
+            )
 
-            // ==============================
-            // FILE NAME
-            // ==============================
+            sheet.setColumnWidth(
+                3,
+                18 * 256
+            )
 
-            val sanitizedSection =
-                session.sectionName.replace(
-                    Regex("[^a-zA-Z0-9_]"),
-                    "_"
-                )
+            sheet.setColumnWidth(
+                4,
+                18 * 256
+            )
 
-            val sanitizedDate =
-                session.date.replace(
-                    Regex("[^a-zA-Z0-9_]"),
-                    "_"
-                )
+            sheet.createFreezePane(
+                0,
+                10
+            )
 
-            val fileName =
-                "${sanitizedSection}_${sanitizedDate}.xlsx"
-
-            // ==============================
-            // EXPORT DIRECTORY
-            // ==============================
-
-            val exportDir =
+            /*
+             * Save file
+             */
+            val exportDirectory =
                 File(
                     context.cacheDir,
                     "exported_reports"
                 )
 
-            if (!exportDir.exists()) {
-                exportDir.mkdirs()
+            if (!exportDirectory.exists()) {
+                exportDirectory.mkdirs()
             }
 
-            // ==============================
-            // CREATE FILE
-            // ==============================
+            val safeSectionName =
+                session.sectionName
+                    .replace(
+                        Regex("[^a-zA-Z0-9._-]"),
+                        "_"
+                    )
+
+            val timestamp =
+                SimpleDateFormat(
+                    "yyyyMMdd_HHmmss",
+                    Locale.US
+                ).format(Date())
 
             val file =
                 File(
-                    exportDir,
-                    fileName
+                    exportDirectory,
+                    "Attendance_${safeSectionName}_${timestamp}.xlsx"
                 )
 
             FileOutputStream(file).use { output ->
-
                 workbook.write(output)
-
-                output.flush()
             }
+
+            workbook.close()
 
             file
 
         } catch (e: Exception) {
-
             e.printStackTrace()
-
             null
-
-        } finally {
-
-            try {
-                workbook?.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
         }
     }
-
-    // ==========================================
-    // SHARE EXCEL FILE
-    // ==========================================
 
     fun shareExportedFile(
         context: Context,
@@ -369,74 +499,43 @@ object ExcelExporter {
         sectionName: String
     ) {
 
-        try {
+        val uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
 
-            // Make sure the file actually exists
-            if (!file.exists()) {
+        val shareIntent =
+            Intent(Intent.ACTION_SEND).apply {
 
-                throw IllegalStateException(
-                    "Exported Excel file does not exist."
+                type =
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                putExtra(
+                    Intent.EXTRA_STREAM,
+                    uri
+                )
+
+                putExtra(
+                    Intent.EXTRA_SUBJECT,
+                    "Attendance Report - $sectionName"
+                )
+
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             }
 
-            // FileProvider authority
-            val authority =
-                "${context.packageName}.fileprovider"
-
-            // Convert local file to content:// URI
-            val contentUri =
-                FileProvider.getUriForFile(
-                    context,
-                    authority,
-                    file
+        context.startActivity(
+            Intent.createChooser(
+                shareIntent,
+                "Share Attendance Report"
+            ).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
                 )
-
-            // Create SEND intent
-            val shareIntent =
-                Intent(Intent.ACTION_SEND).apply {
-
-                    type =
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-                    putExtra(
-                        Intent.EXTRA_STREAM,
-                        contentUri
-                    )
-
-                    putExtra(
-                        Intent.EXTRA_SUBJECT,
-                        "Attendance Report - $sectionName"
-                    )
-
-                    addFlags(
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-
-                    clipData =
-                        android.content.ClipData.newRawUri(
-                            "Attendance Excel",
-                            contentUri
-                        )
-                }
-
-            // Android Share Sheet
-            val chooserIntent =
-                Intent.createChooser(
-                    shareIntent,
-                    "Share Attendance Excel"
-                )
-
-            chooserIntent.addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-
-            context.startActivity(
-                chooserIntent
-            )
-
-        } catch (e: Exception) {
-
-            e.printStackTrace()
-        }
+            }
+        )
     }
 }
