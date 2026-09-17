@@ -7,7 +7,9 @@ object ThemePreferences {
     private const val PREFS_NAME = "quick_attend_preferences"
     private const val KEY_THEME_MODE = "theme_mode"
 
-    fun getThemeMode(context: Context): ThemeMode {
+    fun getThemeMode(
+        context: Context
+    ): ThemeMode {
         val preferences = context.getSharedPreferences(
             PREFS_NAME,
             Context.MODE_PRIVATE
