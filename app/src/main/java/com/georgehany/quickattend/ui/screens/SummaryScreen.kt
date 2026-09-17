@@ -1,11 +1,10 @@
-```kotlin
 package com.georgehany.quickattend.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,12 +18,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Percent
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,42 +48,27 @@ import androidx.compose.ui.unit.dp
 import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 import com.georgehany.quickattend.data.local.entity.Session
 import com.georgehany.quickattend.data.local.entity.Student
-import com.georgehany.quickattend.ui.theme.DarkEmeraldPresent
-import com.georgehany.quickattend.ui.theme.DarkRedNotPresent
-import com.georgehany.quickattend.ui.theme.EmeraldPresent
-import com.georgehany.quickattend.ui.theme.RedNotPresent
-
-// ============================================================
-// QuickAttend Summary Screen
-// ============================================================
+import com.georgehany.quickattend.ui.theme.ErrorRed
+import com.georgehany.quickattend.ui.theme.Success
 
 @Composable
 fun SummaryScreen(
     session: Session,
     students: List<Student>,
-    records: Map<String, AttendanceRecord>,
+    records: List<AttendanceRecord>,
     onExportExcel: () -> Unit,
     onBack: () -> Unit
 ) {
-    val totalStudents = students.size
+    val totalStudents = students.size.coerceAtLeast(session.totalStudents)
 
-    val presentCount =
-        students.count { student ->
-            records[student.studentId]?.isPresent == true
-        }
+    val presentCount = records.count { it.isPresent }
+    val absentCount = records.count { !it.isPresent }
 
-    val absentCount =
-        totalStudents - presentCount
-
-    val attendanceRate =
-        if (totalStudents > 0) {
-            presentCount.toFloat() / totalStudents.toFloat()
-        } else {
-            0f
-        }
-
-    val attendancePercent =
-        (attendanceRate * 100).toInt()
+    val attendanceRate = if (totalStudents > 0) {
+        (presentCount.toFloat() / totalStudents.toFloat()) * 100f
+    } else {
+        0f
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -99,92 +84,88 @@ fun SummaryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 16.dp,
-                bottom = 30.dp
+            contentPadding = PaddingValues(
+                horizontal = 18.dp,
+                vertical = 18.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ------------------------------------------------
-            // Completion Header
-            // ------------------------------------------------
+            // ====================================================
+            // COMPLETION HEADER
+            // ====================================================
 
             item {
-                CompletionHeader(
-                    attendancePercent = attendancePercent
+                CompletionCard(
+                    attendanceRate = attendanceRate
                 )
             }
 
-            // ------------------------------------------------
-            // Overview
-            // ------------------------------------------------
+            // ====================================================
+            // OVERVIEW
+            // ====================================================
 
             item {
-                AttendanceOverviewCard(
-                    presentCount = presentCount,
-                    absentCount = absentCount,
+                SummaryOverviewCard(
                     totalStudents = totalStudents,
-                    attendanceRate = attendanceRate,
-                    attendancePercent = attendancePercent
+                    present = presentCount,
+                    absent = absentCount,
+                    attendanceRate = attendanceRate
                 )
             }
 
-            // ------------------------------------------------
-            // Session Details
-            // ------------------------------------------------
+            // ====================================================
+            // SESSION DETAILS
+            // ====================================================
 
             item {
                 SessionDetailsCard(
-                    session = session
+                    session = session,
+                    totalStudents = totalStudents
                 )
             }
 
-            // ------------------------------------------------
-            // Export
-            // ------------------------------------------------
+            // ====================================================
+            // EXPORT
+            // ====================================================
 
             item {
-                ExportButton(
-                    onClick = onExportExcel
+                ExportCard(
+                    onExportExcel = onExportExcel
                 )
             }
 
-            // ------------------------------------------------
-            // Student Breakdown Header
-            // ------------------------------------------------
+            // ====================================================
+            // STUDENT BREAKDOWN
+            // ====================================================
 
             item {
-                StudentBreakdownHeader(
-                    totalStudents = totalStudents,
-                    attendancePercent = attendancePercent
+                SectionTitle(
+                    title = "Student Breakdown",
+                    subtitle = "Individual attendance results"
                 )
             }
-
-            // ------------------------------------------------
-            // Students
-            // ------------------------------------------------
 
             if (students.isEmpty()) {
 
                 item {
-                    EmptySummaryState()
+                    EmptyStudentBreakdown()
                 }
 
             } else {
 
                 items(
                     items = students,
-                    key = {
-                        it.studentId
-                    }
+                    key = { it.id }
                 ) { student ->
+
+                    val record = records.firstOrNull {
+                        it.studentId == student.studentId
+                    }
 
                     StudentSummaryRow(
                         student = student,
-                        record = records[student.studentId]
+                        isPresent = record?.isPresent
                     )
                 }
             }
@@ -192,9 +173,9 @@ fun SummaryScreen(
     }
 }
 
-// ============================================================
+// ================================================================
 // TOP BAR
-// ============================================================
+// ================================================================
 
 @Composable
 private fun SummaryTopBar(
@@ -203,33 +184,23 @@ private fun SummaryTopBar(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
-        )
+        shadowElevation = 1.dp
     ) {
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    start = 6.dp,
-                    end = 14.dp,
-                    top = 8.dp,
-                    bottom = 10.dp
-                ),
+                .height(70.dp)
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
             IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(44.dp)
+                onClick = onBack
             ) {
 
                 Icon(
-                    imageVector =
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -240,84 +211,57 @@ private fun SummaryTopBar(
             ) {
 
                 Text(
-                    text = "Attendance Summary",
+                    text = sectionName,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(
-                    modifier = Modifier.height(2.dp)
-                )
-
-                Text(
-                    text = sectionName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
 
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(
-                        MaterialTheme.colorScheme.primaryContainer
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-
-                Icon(
-                    imageVector = Icons.Default.Insights,
-                    contentDescription = null,
-                    tint =
-                        MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = "Attendance Summary",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
 
-// ============================================================
-// COMPLETION HEADER
-// ============================================================
+// ================================================================
+// COMPLETION CARD
+// ================================================================
 
 @Composable
-private fun CompletionHeader(
-    attendancePercent: Int
+private fun CompletionCard(
+    attendanceRate: Float
 ) {
-    Surface(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.primary.copy(
-                alpha = 0.14f
-            )
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
     ) {
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 17.dp,
-                    vertical = 16.dp
-                ),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(58.dp)
                     .clip(CircleShape)
                     .background(
-                        MaterialTheme.colorScheme.surface.copy(
-                            alpha = 0.75f
+                        MaterialTheme.colorScheme.onPrimary.copy(
+                            alpha = 0.14f
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -326,13 +270,13 @@ private fun CompletionHeader(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(30.dp)
                 )
             }
 
             Spacer(
-                modifier = Modifier.width(12.dp)
+                modifier = Modifier.width(14.dp)
             )
 
             Column(
@@ -341,9 +285,8 @@ private fun CompletionHeader(
 
                 Text(
                     text = "Attendance Completed",
-                    style = MaterialTheme.typography.titleMedium,
-                    color =
-                        MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -352,37 +295,47 @@ private fun CompletionHeader(
                 )
 
                 Text(
-                    text = "All students have been recorded.",
+                    text = "The attendance session has been successfully recorded.",
                     style = MaterialTheme.typography.bodySmall,
-                    color =
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                            alpha = 0.75f
-                        )
+                    color = MaterialTheme.colorScheme.onPrimary.copy(
+                        alpha = 0.82f
+                    )
                 )
             }
 
-            Text(
-                text = "$attendancePercent%",
-                style = MaterialTheme.typography.headlineSmall,
-                color =
-                    MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold
-            )
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+
+                Text(
+                    text = "${attendanceRate.toInt()}%",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "attendance",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(
+                        alpha = 0.75f
+                    )
+                )
+            }
         }
     }
 }
 
-// ============================================================
-// ATTENDANCE OVERVIEW
-// ============================================================
+// ================================================================
+// OVERVIEW
+// ================================================================
 
 @Composable
-private fun AttendanceOverviewCard(
-    presentCount: Int,
-    absentCount: Int,
+private fun SummaryOverviewCard(
     totalStudents: Int,
-    attendanceRate: Float,
-    attendancePercent: Int
+    present: Int,
+    absent: Int,
+    attendanceRate: Float
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -390,12 +343,8 @@ private fun AttendanceOverviewCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
-        ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
+            defaultElevation = 0.dp
         )
     ) {
 
@@ -406,13 +355,32 @@ private fun AttendanceOverviewCard(
         ) {
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                Column(
-                    modifier = Modifier.weight(1f)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.width(11.dp)
+                )
+
+                Column {
 
                     Text(
                         text = "Attendance Overview",
@@ -421,71 +389,12 @@ private fun AttendanceOverviewCard(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(
-                        modifier = Modifier.height(3.dp)
-                    )
-
                     Text(
                         text = "Session performance at a glance",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Icon(
-                    imageVector = Icons.Default.Insights,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(16.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                SummaryMetricBox(
-                    modifier = Modifier.weight(1f),
-                    label = "Present",
-                    value = presentCount.toString(),
-                    icon = Icons.Default.Check,
-                    accentColor = if (
-                        MaterialTheme.colorScheme.background ==
-                        Color(0xFF0B1220)
-                    ) {
-                        DarkEmeraldPresent
-                    } else {
-                        EmeraldPresent
-                    }
-                )
-
-                SummaryMetricBox(
-                    modifier = Modifier.weight(1f),
-                    label = "Absent",
-                    value = absentCount.toString(),
-                    icon = Icons.Default.Close,
-                    accentColor = if (
-                        MaterialTheme.colorScheme.background ==
-                        Color(0xFF0B1220)
-                    ) {
-                        DarkRedNotPresent
-                    } else {
-                        RedNotPresent
-                    }
-                )
-
-                SummaryMetricBox(
-                    modifier = Modifier.weight(1f),
-                    label = "Total",
-                    value = totalStudents.toString(),
-                    icon = Icons.Default.Groups,
-                    accentColor = MaterialTheme.colorScheme.primary
-                )
             }
 
             Spacer(
@@ -494,74 +403,111 @@ private fun AttendanceOverviewCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                SummaryMetric(
+                    modifier = Modifier.weight(1f),
+                    value = totalStudents.toString(),
+                    label = "Students",
+                    icon = Icons.Default.Groups,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                SummaryMetric(
+                    modifier = Modifier.weight(1f),
+                    value = present.toString(),
+                    label = "Present",
+                    icon = Icons.Default.Check,
+                    tint = Success
+                )
+
+                SummaryMetric(
+                    modifier = Modifier.weight(1f),
+                    value = absent.toString(),
+                    label = "Absent",
+                    icon = Icons.Default.Close,
+                    tint = ErrorRed
+                )
+
+                SummaryMetric(
+                    modifier = Modifier.weight(1f),
+                    value = "${attendanceRate.toInt()}%",
+                    label = "Rate",
+                    icon = Icons.Default.Percent,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
+
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
                 Text(
-                    text = "Attendance Rate",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Attendance rate",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(
                     modifier = Modifier.weight(1f)
                 )
 
                 Text(
-                    text = "$attendancePercent%",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "${attendanceRate.toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(
-                modifier = Modifier.height(8.dp)
+                modifier = Modifier.height(7.dp)
             )
 
             LinearProgressIndicator(
                 progress = {
-                    attendanceRate.coerceIn(
-                        0f,
-                        1f
-                    )
+                    (attendanceRate / 100f).coerceIn(0f, 1f)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(
-                        RoundedCornerShape(10.dp)
-                    ),
-                color = MaterialTheme.colorScheme.primary,
+                    .height(7.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+                color = Success,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }
 }
 
-// ============================================================
-// SUMMARY METRIC
-// ============================================================
+// ================================================================
+// METRIC
+// ================================================================
 
 @Composable
-private fun SummaryMetricBox(
+private fun SummaryMetric(
     modifier: Modifier,
-    label: String,
     value: String,
+    label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accentColor: Color
+    tint: Color
 ) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(15.dp),
-        color = accentColor.copy(
-            alpha = 0.09f
-        )
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = 7.dp,
-                    vertical = 12.dp
+                    horizontal = 4.dp,
+                    vertical = 11.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -569,8 +515,8 @@ private fun SummaryMetricBox(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(20.dp)
+                tint = tint,
+                modifier = Modifier.size(18.dp)
             )
 
             Spacer(
@@ -579,7 +525,7 @@ private fun SummaryMetricBox(
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
@@ -593,23 +539,20 @@ private fun SummaryMetricBox(
     }
 }
 
-// ============================================================
+// ================================================================
 // SESSION DETAILS
-// ============================================================
+// ================================================================
 
 @Composable
 private fun SessionDetailsCard(
-    session: Session
+    session: Session,
+    totalStudents: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -630,243 +573,133 @@ private fun SessionDetailsCard(
             )
 
             Spacer(
-                modifier = Modifier.height(12.dp)
+                modifier = Modifier.height(14.dp)
             )
 
             SummaryDetailRow(
+                icon = Icons.Default.Groups,
                 label = "Section",
                 value = session.sectionName
             )
 
             SummaryDetailRow(
+                icon = Icons.Default.CalendarToday,
                 label = "Date",
                 value = session.date
             )
 
             SummaryDetailRow(
+                icon = Icons.Default.Groups,
                 label = "Students",
-                value = session.totalStudents.toString()
+                value = totalStudents.toString()
             )
 
             SummaryDetailRow(
+                icon = Icons.Default.Schedule,
                 label = "Status",
-                value = "Completed"
+                value = "Completed",
+                valueColor = Success
             )
         }
     }
 }
 
-// ============================================================
-// SESSION DETAIL ROW
-// ============================================================
+// ================================================================
+// DETAIL ROW
+// ================================================================
 
 @Composable
 private fun SummaryDetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    value: String
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp),
+            .padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(19.dp)
+        )
+
+        Spacer(
+            modifier = Modifier.width(11.dp)
+        )
+
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(82.dp)
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(
+            modifier = Modifier.weight(1f)
         )
 
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = valueColor,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
-// ============================================================
-// EXPORT BUTTON
-// ============================================================
+// ================================================================
+// EXPORT
+// ================================================================
 
 @Composable
-private fun ExportButton(
-    onClick: () -> Unit
+private fun ExportCard(
+    onExportExcel: () -> Unit
 ) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-    ) {
-
-        Icon(
-            imageVector = Icons.Default.Description,
-            contentDescription = null,
-            modifier = Modifier.size(21.dp)
-        )
-
-        Spacer(
-            modifier = Modifier.width(8.dp)
-        )
-
-        Text(
-            text = "Export Attendance to Excel",
-            style = MaterialTheme.typography.labelLarge
-        )
-    }
-}
-
-// ============================================================
-// STUDENT BREAKDOWN HEADER
-// ============================================================
-
-@Composable
-private fun StudentBreakdownHeader(
-    totalStudents: Int,
-    attendancePercent: Int
-) {
-    Row(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-
-            Text(
-                text = "Student Breakdown",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(
-                modifier = Modifier.height(2.dp)
-            )
-
-            Text(
-                text = "$totalStudents students",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-
-            Text(
-                text = "$attendancePercent%",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(
-                    horizontal = 10.dp,
-                    vertical = 6.dp
-                )
-            )
-        }
-    }
-}
-
-// ============================================================
-// STUDENT SUMMARY ROW
-// ============================================================
-
-@Composable
-private fun StudentSummaryRow(
-    student: Student,
-    record: AttendanceRecord?
-) {
-    val isPresent =
-        record?.isPresent == true
-
-    val isDark =
-        MaterialTheme.colorScheme.background ==
-                Color(0xFF0B1220)
-
-    val statusColor =
-        if (isPresent) {
-            if (isDark) {
-                DarkEmeraldPresent
-            } else {
-                EmeraldPresent
-            }
-        } else {
-            if (isDark) {
-                DarkRedNotPresent
-            } else {
-                RedNotPresent
-            }
-        }
-
-    val statusText =
-        if (isPresent) {
-            "Present"
-        } else {
-            "Absent"
-        }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
         )
     ) {
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 13.dp,
-                    vertical = 11.dp
-                ),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(13.dp))
                     .background(
-                        statusColor.copy(
-                            alpha = 0.11f
-                        )
+                        MaterialTheme.colorScheme.primaryContainer
                     ),
                 contentAlignment = Alignment.Center
             ) {
 
                 Icon(
-                    imageVector =
-                        if (isPresent) {
-                            Icons.Default.Check
-                        } else {
-                            Icons.Default.Close
-                        },
+                    imageVector = Icons.Default.Download,
                     contentDescription = null,
-                    tint = statusColor,
-                    modifier = Modifier.size(19.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
             Spacer(
-                modifier = Modifier.width(10.dp)
+                modifier = Modifier.width(12.dp)
             )
 
             Column(
@@ -874,7 +707,158 @@ private fun StudentSummaryRow(
             ) {
 
                 Text(
-                    text = student.studentName,
+                    text = "Export Attendance",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text = "Save the session as an Excel report.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Button(
+                onClick = onExportExcel,
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(
+                    horizontal = 14.dp,
+                    vertical = 9.dp
+                )
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+
+                Spacer(
+                    modifier = Modifier.width(6.dp)
+                )
+
+                Text(
+                    text = "Excel",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+// ================================================================
+// SECTION TITLE
+// ================================================================
+
+@Composable
+private fun SectionTitle(
+    title: String,
+    subtitle: String
+) {
+    Column {
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(
+            modifier = Modifier.height(3.dp)
+        )
+
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// ================================================================
+// STUDENT ROW
+// ================================================================
+
+@Composable
+private fun StudentSummaryRow(
+    student: Student,
+    isPresent: Boolean?
+) {
+    val statusColor = when (isPresent) {
+        true -> Success
+        false -> ErrorRed
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val statusText = when (isPresent) {
+        true -> "Present"
+        false -> "Absent"
+        null -> "Not Recorded"
+    }
+
+    val statusIcon = when (isPresent) {
+        true -> Icons.Default.Check
+        false -> Icons.Default.Close
+        null -> Icons.Default.Schedule
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text(
+                    text = student.name
+                        .trim()
+                        .firstOrNull()
+                        ?.uppercase()
+                        ?: "?",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.width(11.dp)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = student.name,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
@@ -888,7 +872,7 @@ private fun StudentSummaryRow(
 
                 Text(
                     text = student.studentId,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -897,88 +881,75 @@ private fun StudentSummaryRow(
 
             Surface(
                 shape = RoundedCornerShape(9.dp),
-                color = statusColor.copy(
-                    alpha = 0.10f
-                )
+                color = statusColor.copy(alpha = 0.11f)
             ) {
 
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = statusColor,
-                    fontWeight = FontWeight.Bold,
+                Row(
                     modifier = Modifier.padding(
-                        horizontal = 9.dp,
-                        vertical = 5.dp
+                        horizontal = 8.dp,
+                        vertical = 6.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(15.dp)
                     )
-                )
+
+                    Spacer(
+                        modifier = Modifier.width(5.dp)
+                    )
+
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
 
-// ============================================================
-// EMPTY STATE
-// ============================================================
+// ================================================================
+// EMPTY STUDENT LIST
+// ================================================================
 
 @Composable
-private fun EmptySummaryState() {
+private fun EmptyStudentBreakdown() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
-        )
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface
     ) {
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(30.dp),
+                .padding(26.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(
-                        MaterialTheme.colorScheme.primaryContainer
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-
-                Icon(
-                    imageVector = Icons.Default.Groups,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(27.dp)
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
-
-            Text(
-                text = "No students found",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
+            Icon(
+                imageVector = Icons.Default.Groups,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(30.dp)
             )
 
             Spacer(
-                modifier = Modifier.height(4.dp)
+                modifier = Modifier.height(8.dp)
             )
 
             Text(
-                text = "There are no students available for this session.",
-                style = MaterialTheme.typography.bodySmall,
+                text = "No student records available.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
-```
