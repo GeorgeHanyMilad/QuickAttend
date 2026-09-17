@@ -11,16 +11,20 @@ import com.georgehany.quickattend.data.local.entity.AttendanceRecord
 interface AttendanceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRecord(record: AttendanceRecord)
+    suspend fun insertRecord(
+        record: AttendanceRecord
+    )
 
     @Delete
-    suspend fun deleteRecord(record: AttendanceRecord)
+    suspend fun deleteRecord(
+        record: AttendanceRecord
+    )
 
     @Query(
         """
-        SELECT *
-        FROM attendance_records
-        WHERE sessionId = :sessionId
+        SELECT * 
+        FROM attendance_records 
+        WHERE sessionId = :sessionId 
         ORDER BY timestamp ASC
         """
     )
@@ -30,7 +34,7 @@ interface AttendanceDao {
 
     @Query(
         """
-        DELETE FROM attendance_records
+        DELETE FROM attendance_records 
         WHERE sessionId = :sessionId
         """
     )
