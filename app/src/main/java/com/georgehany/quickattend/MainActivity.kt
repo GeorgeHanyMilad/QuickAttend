@@ -32,6 +32,7 @@ import com.georgehany.quickattend.ui.theme.QuickAttendTheme
 import com.georgehany.quickattend.ui.theme.ThemeMode
 import com.georgehany.quickattend.ui.theme.ThemePreferences
 import com.georgehany.quickattend.ui.viewmodel.MainViewModel
+import androidx.compose.ui.graphics.toArgb
 
 class MainActivity : ComponentActivity() {
 
