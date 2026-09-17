@@ -29,8 +29,8 @@ interface SessionDao {
 
     @Query(
         """
-        SELECT * 
-        FROM sessions 
+        SELECT *
+        FROM sessions
         ORDER BY id DESC
         """
     )
@@ -38,9 +38,9 @@ interface SessionDao {
 
     @Query(
         """
-        SELECT * 
-        FROM sessions 
-        WHERE id = :sessionId 
+        SELECT *
+        FROM sessions
+        WHERE id = :sessionId
         LIMIT 1
         """
     )
