@@ -15,12 +15,23 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("sessionId"), Index(value = ["sessionId", "studentId"], unique = true)]
+    indices = [
+        Index(value = ["sessionId"]),
+        Index(
+            value = ["sessionId", "studentId"],
+            unique = true
+        )
+    ]
 )
 data class AttendanceRecord(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+
     val sessionId: Long,
+
     val studentId: String,
+
     val isPresent: Boolean,
+
     val timestamp: Long = System.currentTimeMillis()
 )
