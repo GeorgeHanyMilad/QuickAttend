@@ -22,9 +22,9 @@ interface AttendanceDao {
 
     @Query(
         """
-        SELECT * 
-        FROM attendance_records 
-        WHERE sessionId = :sessionId 
+        SELECT *
+        FROM attendance_records
+        WHERE sessionId = :sessionId
         ORDER BY timestamp ASC
         """
     )
@@ -34,7 +34,7 @@ interface AttendanceDao {
 
     @Query(
         """
-        DELETE FROM attendance_records 
+        DELETE FROM attendance_records
         WHERE sessionId = :sessionId
         """
     )
